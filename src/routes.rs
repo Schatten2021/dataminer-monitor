@@ -34,12 +34,13 @@ async fn send_email(state: &Arc<State>, subject: String, body: impl lettre::mess
         let lock = state.email_config.read().await;
         lettre::transport::smtp::authentication::Credentials::new(lock.address.clone(), lock.password.clone())
     };
-    let mailer = lettre::transport::smtp::SmtpTransport::starttls_relay(&*state.email_config.read().await.server.clone())?
+    let email_address = state.email_config.read().await.server.clone();
+    let mailer = lettre::transport::smtp::SmtpTransport::starttls_relay(&*email_address)?
         .credentials(credentials)
         .build();
     for target in lock.iter() {
         let email = lettre::Message::builder()
-            .from("No Reply <no_reply@mail.fms.nrw>".parse()?)
+            .from(format!("No Reply <{email_address}>").parse()?)
             .to(target.parse()?)
             .subject(&*subject)
             .header(lettre::message::header::ContentType::TEXT_HTML)
