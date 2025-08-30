@@ -33,9 +33,14 @@ impl State {
     /// # Returns
     /// Whether the miner just went online, aka, whether we need to send a notification.
     pub async fn miner_ping(&self, id: &String) -> bool {
+        println!("locking stati");
         let lock = self.miner_stati.read().await;
+        println!("lock acquired");
         let Some(miner) = lock.get(id) else {
+            drop(lock);
+            println!("miner not yet registered");
             self.miner_stati.write().await.insert(id.clone(), RwLock::new(DataMinerStatus::new()));
+            println!("registered miner");
             return true;
         };
         let updated = {
