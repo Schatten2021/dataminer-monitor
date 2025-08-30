@@ -1,4 +1,5 @@
 mod interface;
+mod api;
 
 #[wasm_bindgen::prelude::wasm_bindgen(start)]
 pub fn run() {
@@ -9,3 +10,4 @@ pub fn run() {
     yew::Renderer::<interface::Main>::with_root(app_div).render();
     web_sys::console::log_1(&"running_app".into());
 }
+pub use wasm_bindgen_futures::spawn_local as spawn;

@@ -33,20 +33,16 @@ impl State {
     /// # Returns
     /// Whether the miner just went online, aka, whether we need to send a notification.
     pub async fn miner_ping(&self, id: &String) -> bool {
-        println!("locking stati");
         let lock = self.miner_stati.read().await;
-        println!("lock acquired");
         let Some(miner) = lock.get(id) else {
             drop(lock);
-            println!("miner not yet registered");
             self.miner_stati.write().await.insert(id.clone(), RwLock::new(DataMinerStatus::new()));
-            println!("registered miner");
             return true;
         };
         let updated = {
             match self.get_timeout_period(id).await {
                 None => false,
-                Some(duration) => miner.read().await.is_online(duration),
+                Some(duration) => !miner.read().await.is_online(duration),
             }
         };
         self.marked_offline.write().await.remove(id);
@@ -90,5 +86,28 @@ impl State {
         };
         new_self.load_config().await?;
         Ok(new_self)
+    }
+}
+impl State {
+    pub async fn get_all_stati(&self) -> Vec<api_types::DataminerStatus> {
+        let mut result = Vec::with_capacity(self.miner_stati.read().await.len());
+        let mut found_ids = HashSet::new();
+        for (id, status) in self.miner_stati.read().await.iter() {
+            result.push(api_types::DataminerStatus {
+                id: id.clone(),
+                last_ping: Some(status.read().await.last_ping.to_utc()),
+                timeout_period: self.get_timeout_period(id).await,
+            });
+            found_ids.insert(id.clone());
+        }
+        for (id, timeout) in self.miner_config.read().await.iter()
+            .filter(|(id, _)| !found_ids.contains(*id)) {
+            result.push(api_types::DataminerStatus {
+                id: id.clone(),
+                last_ping: None,
+                timeout_period: Some(timeout.period),
+            });
+        }
+        result.into_iter().collect()
     }
 }
