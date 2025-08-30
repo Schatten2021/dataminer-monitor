@@ -8,7 +8,7 @@ mod routes;
 async fn launch() -> _ {
     rocket::build()
         .manage(std::sync::Arc::new(State::new().await.expect("unable to initialize state")))
-        .mount("/", rocket::routes![routes::miner_ping])
+        .mount("/", routes::routes())
         .configure({
             let mut config = rocket::config::Config::debug_default();
             config.workers = 5;
