@@ -1,5 +1,5 @@
 # Dataminer Monitor
-This is my own monitor server for my data-miners.
+This is my own rocket-based monitor server for my data-miners.
 
 It is built to be easily integratable into any dataminer. 
 Because of this the only way the monitor interacts with the dataminer is through pings from the dataminer.
@@ -30,3 +30,8 @@ A dataminer might be configured like this:
 [timeouts.example]
 period = [60, 0] # Timeout after 60 seconds
 ```
+
+## rocket
+This server uses [rockets](https://rocket.rs/) default [Figment](https://crates.io/crates/figment) configuration (see [the rocket documentation](https://rocket.rs/guide/master/configuration/)).
+
+The ideal way to configure it is probably via `Rocket.toml`
