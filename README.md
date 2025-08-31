@@ -20,15 +20,15 @@ It has the following (hopefully self-explanatory) fields:
 - `address`
 - `password`
 - `server`
-## `[timeouts]`
-This section dictates the configuration for each server.
+## `[miners]`
+This section dictates the configuration for each dataminer.
 
-Note: The only value currently defined is `period`, which is in the format of `[seconds, nanoseconds]` (due to chrono serialization).
+Note: The only value currently defined is `timeout`, which is in the format of `[seconds, nanoseconds]` (due to chrono serialization).
 
 A dataminer might be configured like this: 
 ```toml
-[timeouts.example]
-period = [60, 0] # Timeout after 60 seconds
+[miner.example]
+timeout = [60, 0] # Timeout after 60 seconds
 ```
 
 ## rocket

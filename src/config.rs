@@ -6,13 +6,13 @@ pub struct Config {
     #[serde(default)]
     pub notify: Vec<String>,
     #[serde(default)]
-    pub timeouts: std::collections::HashMap<String, TimeoutConfig>,
+    pub miner: std::collections::HashMap<String, MinerConfig>,
 }
 
 
 #[derive(serde::Serialize, serde::Deserialize, Default, Debug, Clone)]
-pub struct TimeoutConfig {
-    pub period: chrono::Duration,
+pub struct MinerConfig {
+    pub timeout: chrono::Duration,
 }
 #[cfg(feature = "e-mail-notifications")]
 #[derive(serde::Serialize, serde::Deserialize, Default, Debug, Clone)]

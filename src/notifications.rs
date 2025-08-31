@@ -6,26 +6,37 @@ pub enum NotificationReason {
     WentOnline,
     WentOffline,
 }
-pub fn send_notification(miner_id: &str, reason: NotificationReason, _state: &Arc<State>) {
+#[derive(Clone, Copy, Debug)]
+pub enum Type {
+    DataMiner,
+}
+impl std::fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Type::DataMiner => "Dataminer",
+        })
+    }
+}
+pub fn send_notification(item_id: &str, reason: NotificationReason, source: Type, _state: &Arc<State>) {
     #[cfg(feature = "e-mail-notifications")]
     {
         let state = _state.clone();
-        let id = miner_id.to_string();
+        let id = item_id.to_string();
         tokio::spawn(async move {
             let subject = match reason {
-                NotificationReason::WentOnline => format!("Dataminer `{id}` is back online"),
-                NotificationReason::WentOffline => format!("Dataminer `{id}` went offline!"),
+                NotificationReason::WentOnline => format!("{source} `{id}` is back online"),
+                NotificationReason::WentOffline => format!("{source} `{id}` went offline!"),
             };
             let body = match reason {
-                NotificationReason::WentOnline => format!("<h1>The Dataminer <code>{id}</code> is now back online. Live is good.</h1>"),
-                NotificationReason::WentOffline => format!("<h1>The Dataminer <code>{id}</code> just went offline! They need a checkin!</h1>"),
+                NotificationReason::WentOnline => format!("<h1>The {source} <code>{id}</code> is now back online. Live is good.</h1>"),
+                NotificationReason::WentOffline => format!("<h1>The {source} <code>{id}</code> just went offline! They need a checkin!</h1>"),
             };
             if let Err(e) = send_email(state, subject, body).await {
                 rocket::log::private::error!("Failed to send E-Mail: {e}");
             };
         });
     }
-    let id = miner_id.to_string();
+    let id = item_id.to_string();
     tokio::spawn(async move {
         let info = api_types::MinerStatusChange { id, is_online: match reason {
             NotificationReason::WentOnline => true,

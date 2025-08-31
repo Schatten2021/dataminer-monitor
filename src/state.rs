@@ -1,4 +1,4 @@
-use crate::config::{Config, TimeoutConfig};
+use crate::config::{Config, MinerConfig};
 use std::collections::{HashMap, HashSet};
 use tokio::sync::RwLock;
 
@@ -21,9 +21,10 @@ impl DataMinerStatus {
     }
 }
 
+#[derive(Default, Debug)]
 pub struct State {
     miner_stati: RwLock<HashMap<String, RwLock<DataMinerStatus>>>,
-    miner_config: RwLock<HashMap<String, TimeoutConfig>>,
+    miner_config: RwLock<HashMap<String, MinerConfig>>,
     marked_offline: RwLock<HashSet<String>>,
     #[cfg(feature = "e-mail-notifications")]
     pub email_config: RwLock<crate::config::EmailConfig>,
@@ -51,12 +52,12 @@ impl State {
         updated
     }
     pub async fn get_timeout_period(&self, miner_id: &String) -> Option<chrono::Duration> {
-        Some(self.miner_config.read().await.get(miner_id)?.period)
+        Some(self.miner_config.read().await.get(miner_id)?.timeout)
     }
     pub async fn load_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         let data: Config = toml::from_str(&*std::fs::read_to_string(Self::CONFIG_FILE)?)?;
         let mut timout_lock = self.miner_config.write().await;
-        *timout_lock = data.timeouts;
+        *timout_lock = data.miner;
         #[cfg(feature = "e-mail-notifications")]
         {
             let mut email_lock = self.email_config.write().await;
@@ -81,14 +82,7 @@ impl State {
         lock.contains(miner_id)
     }
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let new_self = Self {
-            miner_stati: Default::default(),
-            miner_config: Default::default(),
-            marked_offline: Default::default(),
-            #[cfg(feature = "e-mail-notifications")]
-            email_config: Default::default(),
-            notification_targets: Default::default(),
-        };
+        let new_self = Self::default();
         new_self.load_config().await?;
         Ok(new_self)
     }
@@ -110,7 +104,7 @@ impl State {
             result.push(api_types::DataminerStatus {
                 id: id.clone(),
                 last_ping: None,
-                timeout_period: Some(timeout.period),
+                timeout_period: Some(timeout.timeout),
             });
         }
         result.into_iter().collect()
