@@ -1,4 +1,4 @@
-use crate::config::{Config, EmailConfig, TimeoutConfig};
+use crate::config::{Config, TimeoutConfig};
 use std::collections::{HashMap, HashSet};
 use tokio::sync::RwLock;
 
@@ -25,7 +25,8 @@ pub struct State {
     miner_stati: RwLock<HashMap<String, RwLock<DataMinerStatus>>>,
     miner_config: RwLock<HashMap<String, TimeoutConfig>>,
     marked_offline: RwLock<HashSet<String>>,
-    pub email_config: RwLock<EmailConfig>,
+    #[cfg(feature = "e-mail-notifications")]
+    pub email_config: RwLock<crate::config::EmailConfig>,
     pub notification_targets: RwLock<Vec<String>>,
 }
 impl State {
@@ -56,8 +57,11 @@ impl State {
         let data: Config = toml::from_str(&*std::fs::read_to_string(Self::CONFIG_FILE)?)?;
         let mut timout_lock = self.miner_config.write().await;
         *timout_lock = data.timeouts;
-        let mut email_lock = self.email_config.write().await;
-        *email_lock = data.email;
+        #[cfg(feature = "e-mail-notifications")]
+        {
+            let mut email_lock = self.email_config.write().await;
+            *email_lock = data.email;
+        }
         let mut notification_targets_lock = self.notification_targets.write().await;
         *notification_targets_lock = data.notify;
         Ok(())
@@ -81,6 +85,7 @@ impl State {
             miner_stati: Default::default(),
             miner_config: Default::default(),
             marked_offline: Default::default(),
+            #[cfg(feature = "e-mail-notifications")]
             email_config: Default::default(),
             notification_targets: Default::default(),
         };

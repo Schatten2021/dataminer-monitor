@@ -1,6 +1,7 @@
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct Config {
+    #[cfg(feature = "e-mail-notifications")]
     pub email: EmailConfig,
     #[serde(default)]
     pub notify: Vec<String>,
@@ -13,6 +14,7 @@ pub struct Config {
 pub struct TimeoutConfig {
     pub period: chrono::Duration,
 }
+#[cfg(feature = "e-mail-notifications")]
 #[derive(serde::Serialize, serde::Deserialize, Default, Debug, Clone)]
 pub struct EmailConfig {
     pub address: String,
