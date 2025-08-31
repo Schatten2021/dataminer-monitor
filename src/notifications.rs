@@ -12,12 +12,12 @@ pub fn send_notification(miner_id: &str, reason: NotificationReason, _state: &Ar
     let id = miner_id.to_string();
     tokio::spawn(async move {
         let subject = match reason {
-            NotificationReason::WentOnline => format!("Dataminer {id} is back online"),
-            NotificationReason::WentOffline => format!("Dataminer {id} went offline!"),
+            NotificationReason::WentOnline => format!("Dataminer `{id}` is back online"),
+            NotificationReason::WentOffline => format!("Dataminer `{id}` went offline!"),
         };
         let body = match reason {
-            NotificationReason::WentOnline => format!("<h1>The Dataminer {id} is now back online. Live is good.</h1>"),
-            NotificationReason::WentOffline => format!("<h1>The Dataminer {id} just went offline! They need a checkin!</h1>"),
+            NotificationReason::WentOnline => format!("<h1>The Dataminer <code>{id}</code> is now back online. Live is good.</h1>"),
+            NotificationReason::WentOffline => format!("<h1>The Dataminer <code>{id}</code> just went offline! They need a checkin!</h1>"),
         };
         if let Err(e) = send_email(state, subject, body).await {
             rocket::log::private::error!("Failed to send E-Mail: {e}");
