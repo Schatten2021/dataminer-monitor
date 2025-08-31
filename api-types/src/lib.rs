@@ -4,3 +4,8 @@ pub struct DataminerStatus {
     pub last_ping: Option<chrono::DateTime<chrono::Utc>>,
     pub timeout_period: Option<chrono::Duration>,
 }
+#[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct MinerStatusChange {
+    pub id: String,
+    pub is_online: bool,
+}

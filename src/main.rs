@@ -3,6 +3,7 @@ use crate::state::State;
 mod state;
 mod config;
 mod routes;
+mod notifications;
 
 #[rocket::launch]
 async fn launch() -> _ {
