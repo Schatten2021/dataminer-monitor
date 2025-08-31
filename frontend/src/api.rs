@@ -1,22 +1,22 @@
 use api_types::WebSocketMessage;
 use gloo_net::websocket::Message;
 
-#[cfg(debug_assertions)]
-const SOURCE_URL: &'static str = "http://localhost:8000";
+pub fn build_url(url: &str) -> String {
+    let base: String = web_sys::window().unwrap().location().href().unwrap();
+    web_sys::Url::new_with_base(url, &base).unwrap().href()
+}
 pub async fn post_request<Request: serde::Serialize, Response: for<'a> serde::Deserialize<'a>>(path: &'static str, data: &Request) -> Result<Response, gloo_net::Error> {
-    #[cfg(not(debug_assertions))]
-    compile_error!("there is no production system that efficiently checks the source url yet.");
-    gloo_net::http::Request::post(&*(SOURCE_URL.to_string() + path))
+    gloo_net::http::Request::post(&*build_url(path))
         .json(data)?
         .send().await?
         .json().await
 }
 pub async fn get_all_stati() -> Result<Vec<api_types::DataminerStatus>, gloo_net::Error> {
-    post_request("/api/all_statuses", &()).await
+    post_request("api/all_statuses", &()).await
 }
 pub fn subscribe(callback: yew::Callback<WebSocketMessage>) -> Result<(), wasm_bindgen::JsError> {
     println!("subscribing to websocket");
-    let mut socket = gloo_net::websocket::futures::WebSocket::open(&*format!("{SOURCE_URL}/ws"))?;
+    let mut socket = gloo_net::websocket::futures::WebSocket::open(&*build_url("ws"))?;
     crate::spawn(async move {
         use futures_util::StreamExt;
         while let Some(Ok(message)) = socket.next().await {
