@@ -1,7 +1,6 @@
 use std::hash::Hash;
 use std::sync::atomic::AtomicUsize;
 use rocket::futures::FutureExt;
-use crate::state::State;
 
 #[derive(Clone)]
 pub struct WebSocket {
@@ -27,11 +26,11 @@ mod ws_impl {
         fn get_sockets_lock<'a>() -> &'a RwLock<HashSet<WebSocket>> {
             SOCKETS.get_or_init(|| RwLock::new(HashSet::new()))
         }
-        pub async fn send<T: serde::Serialize>(&self, data: T) -> Result<(), ws::result::Error> {
+        pub async fn send(&self, data: api_types::WebSocketMessage) -> Result<(), ws::result::Error> {
             self.inner.lock().await
                 .send(ws::Message::Text(rocket::serde::json::to_string(&data).expect("unable to serialize data?!?"))).await
         }
-        pub async fn broadcast<T: serde::Serialize + Clone + Send + 'static>(data: T) {
+        pub async fn broadcast(data: api_types::WebSocketMessage) {
             Self::get_sockets_lock().read().await.iter().for_each(|socket| {
                 let socket = socket.clone();
                 let data = data.clone();

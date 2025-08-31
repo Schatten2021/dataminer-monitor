@@ -30,9 +30,9 @@ pub fn send_notification(miner_id: &str, reason: NotificationReason, _state: &Ar
             NotificationReason::WentOnline => true,
             NotificationReason::WentOffline => false,
         } };
-        crate::routes::websocket::WebSocket::broadcast(info).await;
+        crate::routes::websocket::WebSocket::broadcast(api_types::WebSocketMessage::MinerStatusChange(info)).await;
     });
-    
+
 }
 async fn send_email(state: Arc<State>, subject: String, body: impl lettre::message::IntoBody + Clone) -> Result<(), Box<dyn std::error::Error>> {
     let config = state.email_config.read().await.clone();

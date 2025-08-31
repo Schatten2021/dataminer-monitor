@@ -15,9 +15,11 @@ web-sys = { version = "0.3.77", features = ["console", "Window", "Document", "El
 api-types = { path = "../api-types" }
 gloo-net = "0.6.0"
 wasm-bindgen-futures = "0.4.50"
+serde_json = "1.0.143"
 # framework
 yew = { version = "0.21.0", features = ["csr"] }
 
 # util
 serde = "1.0.219"
 chrono = "0.4.41"
+futures-util = "0.3.31"

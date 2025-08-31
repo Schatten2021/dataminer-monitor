@@ -3,7 +3,6 @@ pub mod websocket;
 mod frontend;
 
 use std::sync::Arc;
-use lettre::Transport;
 use crate::state::State;
 
 pub fn routes() -> Vec<rocket::Route> {

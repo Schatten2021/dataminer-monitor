@@ -1,12 +1,31 @@
+mod miner_status_display;
+
 use yew::prelude::*;
+use api_types::WebSocketMessage;
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct MinerStatus {
+    pub id: String,
+    pub last_seen: Option<chrono::DateTime<chrono::Utc>>,
+    pub is_online: bool,
+}
+impl From<api_types::DataminerStatus> for MinerStatus {
+    fn from(status: api_types::DataminerStatus) -> Self {
+        Self {
+            id: status.id,
+            last_seen: status.last_ping,
+            is_online: status.last_ping.map_or(false, |p| status.timeout_period.map_or(true, |v| (chrono::Utc::now() - p) < v)),
+        }
+    }
+}
 
 pub enum Message {
-    StatusesReceived(Vec<api_types::DataminerStatus>)
+    StatusesReceived(Vec<api_types::DataminerStatus>),
+    WSMessage(api_types::WebSocketMessage)
 }
 
 #[derive(Default)]
 pub struct Main {
-    statuses: Option<Vec<api_types::DataminerStatus>>,
+    statuses: Vec<MinerStatus>,
 }
 
 impl Component for Main {
@@ -17,42 +36,28 @@ impl Component for Main {
         crate::spawn(async move {
             callback.emit(crate::api::get_all_stati().await.expect("unable to request stati"))
         });
+        crate::api::subscribe(ctx.link().callback(Message::WSMessage)).expect("unable to subscribe to websocket");
         Self::default()
     }
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Message::StatusesReceived(statuses) => {
-                self.statuses = Some(statuses);
+                self.statuses = statuses.into_iter().map(Into::into).collect();
+            },
+            Message::WSMessage(message) => {
+                match message {
+                    WebSocketMessage::MinerStatusChange(api_types::MinerStatusChange { id, is_online }) => {
+                        let Some(status) = self.statuses.iter_mut().find(|v| v.id == id) else {
+                            return false
+                        };
+                        status.is_online = is_online;
+                    }
+                }
             }
         }
         true
     }
-    fn view(&self, ctx: &Context<Self>) -> Html {
-        match &self.statuses {
-            None => html!{ <h1>{"Loading stati"}</h1>},
-            Some(stati) => {
-                stati.iter()
-                    .map(|status| html! {
-                        <div class="status">
-                            <h2 class="status-name">{&status.id}</h2>
-                            <p>
-                                {
-                                    match status.last_ping.as_ref() {
-                                        None => "Never seen before :(".to_string(),
-                                        Some(dt) => format!("last seen: {}", dt.with_timezone(&chrono::Local))
-                                    }
-                                }
-                            </p>
-                            <p>{
-                                match &status.last_ping {
-                                    None => "Doesn't timeout :)".to_string(),
-                                    Some(dt) => format!("timeouts after: {}", dt.with_timezone(&chrono::Local)),
-                                }
-                            }</p>
-                        </div>
-                        })
-                    .collect::<Html>()
-            },
-        }
+    fn view(&self, _ctx: &Context<Self>) -> Html {
+        self.statuses.iter().map(|status| html!{<miner_status_display::MinerStatusDisplay miner_status={status.clone()} />}).collect()
     }
 }

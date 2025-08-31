@@ -22,3 +22,22 @@ input {
     grid-template-rows: 1fr minmax(min-content, max-content);
     overflow: hidden;
 }
+
+.miner {
+    border-radius: 5px;
+    border-color: lightgrey;
+    border-width: 1px;
+    background-color: #444;
+    padding: 4px;
+    position: relative;
+    width: fit-content;
+}
+.miner-name {
+}
+.miner-status {
+    color: red;
+    padding-right: 5px;
+}
+.miner-status-active {
+    color: green;
+}

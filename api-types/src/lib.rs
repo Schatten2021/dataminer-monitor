@@ -9,3 +9,7 @@ pub struct MinerStatusChange {
     pub id: String,
     pub is_online: bool,
 }
+#[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum WebSocketMessage {
+    MinerStatusChange(MinerStatusChange),
+}
