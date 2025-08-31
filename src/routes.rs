@@ -14,6 +14,7 @@ pub fn miner_ping(id: String, miner_states: &rocket::State<Arc<State>>) -> rocke
     let state = Arc::clone(miner_states.inner());
     tokio::spawn(async move {
         let went_online = state.miner_ping(&id).await;
+        websocket::WebSocket::broadcast(api_types::WebSocketMessage::MinerPing(id.clone())).await;
         if went_online {
             crate::notifications::send_notification(&id, crate::notifications::NotificationReason::WentOnline, &state);
         }

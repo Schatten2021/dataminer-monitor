@@ -28,6 +28,11 @@ pub struct Main {
     statuses: Vec<MinerStatus>,
 }
 
+impl Main {
+    fn get_status_mut(&mut self, id: &str) -> Option<&mut MinerStatus> {
+        self.statuses.iter_mut().find(|v| v.id == id)
+    }
+}
 impl Component for Main {
     type Message = Message;
     type Properties = ();
@@ -47,10 +52,12 @@ impl Component for Main {
             Message::WSMessage(message) => {
                 match message {
                     WebSocketMessage::MinerStatusChange(api_types::MinerStatusChange { id, is_online }) => {
-                        let Some(status) = self.statuses.iter_mut().find(|v| v.id == id) else {
-                            return false
-                        };
+                        let Some(status) = self.get_status_mut(&id) else { return false };
                         status.is_online = is_online;
+                    },
+                    WebSocketMessage::MinerPing(miner_id) => {
+                        let Some(status) = self.get_status_mut(&miner_id) else { return false };
+                        status.last_seen = Some(chrono::Utc::now());
                     }
                 }
             }

@@ -12,4 +12,5 @@ pub struct MinerStatusChange {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum WebSocketMessage {
     MinerStatusChange(MinerStatusChange),
+    MinerPing(String),
 }
