@@ -1,0 +1,27 @@
+[package]
+name = "state-management"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+e-mails = ["dep:lettre"]
+dataminer_provider = ["chrono/serde"]
+server_provider = ["dep:reqwest"]
+website = ["dep:ws", "api-types", "rocket/json"]
+
+default = ["e-mails", "dataminer_provider", "website", "server_provider"]
+
+[dependencies]
+rocket = "0.5.1"
+parking_lot = "0.12.4"
+toml = "0.9.5"
+serde = "1.0.219"
+log = "0.4.27"
+
+chrono = { version = "0.4.41" }
+lettre = { version = "0.11.18", optional = true }
+ws = { version = "0.1.1", package = "rocket_ws", optional = true }
+api-types = { path = "../api-types", optional = true }
+pollster = "0.4.0"
+reqwest = { version = "0.12.23", optional = true }
+

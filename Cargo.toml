@@ -15,6 +15,7 @@ default = ["e-mail-notifications"]
 rocket = { version = "0.5.1", features = ["json"] }
 tokio = "1.47.1"
 chrono = { version = "0.4.41", features = ["serde"] }
+state-management = { path = "state-management" }
 # frontend
 api-types = { path = "api-types" }
 ws = { version = "0.1.1", package = "rocket_ws" }

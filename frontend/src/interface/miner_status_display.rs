@@ -25,7 +25,7 @@ impl Component for MinerStatusDisplay {
             <div class="miner">
                 <div class="miner-name">
                     <span class={format!("miner-status {}", status.is_online.then_some("miner-status-active").unwrap_or_default())}>{"⬤"}</span>
-                    {&status.id}
+                    {&status.name}
                 </div>
                 <div class="miner-last-seen">{"Last seen: "}{last_seen}</div>
             </div>
