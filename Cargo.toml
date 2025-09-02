@@ -1,27 +1,23 @@
 [package]
 name = "dataminer-status-server"
-version = "1.0.0"
+version = "2.0.0"
 edition = "2024"
 build = "build.rs"
 
 [features]
-e-mail-notifications = ["dep:lettre"]
-frontend-file-hot-reload = []
 
-default = ["e-mail-notifications"]
+e-mail-notifications = ["state-management/e-mail-notifications"]
+dataminer-status-source = ["state-management/dataminer-status-source"]
+server-status-source = ["state-management/server-status-source"]
+frontend-website = ["state-management/frontend-website"]
+frontend-websocket = ["state-management/frontend-websocket"]
+
+all-notifications = ["state-management/all-notifications", "e-mail-notifications", "frontend-website", "frontend-websocket"]
+all-data-sources = ["state-management/all-data-sources", "dataminer-status-source", "server-status-source"]
+
+default = ["state-management/default", "all-notifications", "all-data-sources"]
 
 [dependencies]
 # core server functionality
 rocket = { version = "0.5.1", features = ["json"] }
-tokio = "1.47.1"
-chrono = { version = "0.4.41", features = ["serde"] }
-# frontend
-api-types = { path = "api-types" }
-ws = { version = "0.1.1", package = "rocket_ws" }
-
-# configurability
-serde = { version = "1.0.219", features = ["derive"] }
-toml = "0.9.5"
-
-# notification service
-lettre = { version = "0.11.18", optional = true }
+state-management = { path = "state-management", default-features = false }

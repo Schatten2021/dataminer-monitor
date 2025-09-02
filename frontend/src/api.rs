@@ -11,7 +11,7 @@ pub async fn post_request<Request: serde::Serialize, Response: for<'a> serde::De
         .send().await?
         .json().await
 }
-pub async fn get_all_stati() -> Result<Vec<api_types::DataminerStatus>, gloo_net::Error> {
+pub async fn get_all_stati() -> Result<api_types::AllStatiResponse, gloo_net::Error> {
     post_request("api/all_statuses", &()).await
 }
 pub fn subscribe(callback: yew::Callback<WebSocketMessage>) -> Result<(), wasm_bindgen::JsError> {

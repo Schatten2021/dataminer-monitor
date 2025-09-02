@@ -6,8 +6,8 @@ pub struct Properties {
     pub miner_status: MinerStatus,
 }
 
-pub struct MinerStatusDisplay;
-impl Component for MinerStatusDisplay {
+pub struct ElementStatusDisplay;
+impl Component for ElementStatusDisplay {
     type Message = ();
     type Properties = Properties;
 
@@ -22,12 +22,12 @@ impl Component for MinerStatusDisplay {
             Some(t) => t.format("%d.%m.%Y %H:%M:%S").to_string(),
         };
         html!(
-            <div class="miner">
-                <div class="miner-name">
-                    <span class={format!("miner-status {}", status.is_online.then_some("miner-status-active").unwrap_or_default())}>{"⬤"}</span>
-                    {&status.id}
+            <div class="status-display">
+                <div class="status-display-name">
+                    <span class={format!("status {}", status.is_online.then_some("status-active").unwrap_or_default())}>{"⬤"}</span>
+                    {&status.name}
                 </div>
-                <div class="miner-last-seen">{"Last seen: "}{last_seen}</div>
+                <div class="status-display-seen">{"Last seen: "}{last_seen}</div>
             </div>
         )
     }
