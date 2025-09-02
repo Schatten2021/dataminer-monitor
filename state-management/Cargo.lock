@@ -1928,12 +1928,11 @@ dependencies = [
 
 [[package]]
 name = "state-management"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "api-types",
  "chrono",
  "lettre",
- "log",
  "parking_lot",
  "pollster",
  "reqwest",

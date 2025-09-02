@@ -1,17 +1,17 @@
-#[cfg(feature = "dataminer_provider")]
+#[cfg(feature = "dataminer-status-source")]
 mod dataminer;
-#[cfg(feature = "e-mails")]
+#[cfg(feature = "e-mail-notifications")]
 mod email_notifier;
-#[cfg(feature = "website")]
+#[cfg(feature = "frontend-website")]
 mod website;
-#[cfg(feature = "server_provider")]
+#[cfg(feature = "server-status-source")]
 mod server;
 
-#[cfg(feature = "dataminer_provider")]
+#[cfg(feature = "dataminer-status-source")]
 pub use dataminer::DataMinerInfoSource;
-#[cfg(feature = "e-mails")]
+#[cfg(feature = "e-mail-notifications")]
 pub use email_notifier::EmailNotifier as EmailNotifications;
-#[cfg(feature = "website")]
+#[cfg(feature = "frontend-website")]
 pub use website::Website;
-#[cfg(feature = "server_provider")]
+#[cfg(feature = "server-status-source")]
 pub use server::WebServerInfoProvider;

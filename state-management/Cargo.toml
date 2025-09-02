@@ -1,27 +1,30 @@
 [package]
 name = "state-management"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 
 [features]
-e-mails = ["dep:lettre"]
-dataminer_provider = ["chrono/serde"]
-server_provider = ["dep:reqwest"]
-website = ["dep:ws", "api-types", "rocket/json"]
+e-mail-notifications = ["dep:lettre"]
+dataminer-status-source = ["dep:chrono", "chrono/serde"]
+server-status-source = ["dep:reqwest"]
+frontend-website = ["api-types", "rocket/json", "dep:chrono", "pollster"]
+frontend-websocket = ["dep:ws", "frontend-website"]
 
-default = ["e-mails", "dataminer_provider", "website", "server_provider"]
+all-notifications = ["e-mail-notifications", "frontend-website", "frontend-websocket"]
+all-data-sources = ["server-status-source", "dataminer-status-source"]
+
+default = ["all-data-sources", "all-notifications"]
 
 [dependencies]
 rocket = "0.5.1"
 parking_lot = "0.12.4"
 toml = "0.9.5"
 serde = "1.0.219"
-log = "0.4.27"
 
-chrono = { version = "0.4.41" }
+chrono = { version = "0.4.41", optional = true }
 lettre = { version = "0.11.18", optional = true }
 ws = { version = "0.1.1", package = "rocket_ws", optional = true }
 api-types = { path = "../api-types", optional = true }
-pollster = "0.4.0"
+pollster = { version = "0.4.0", optional = true }
 reqwest = { version = "0.12.23", optional = true }
 

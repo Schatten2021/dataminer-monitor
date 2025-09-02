@@ -2,14 +2,12 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
-use log::{error, info};
 use rocket::http::uri::fmt::Path;
 use rocket::http::uri::Segments;
 use rocket::{tokio, Data, Request};
 use rocket::response::Responder;
 use rocket::route::Outcome;
 use parking_lot::RwLock;
-use rocket::futures::{FutureExt, SinkExt};
 use crate::{Notification, NotificationReason, StateHandle};
 
 fn default_static_dir() -> PathBuf {
@@ -28,35 +26,43 @@ impl Default for Config {
         }
     }
 }
-#[derive(Clone)]
-struct WebSocket {
-    id: usize,
-    inner: Arc<tokio::sync::Mutex<ws::stream::DuplexStream>>,
-}
-impl WebSocket {
-    fn new(inner: ws::stream::DuplexStream) -> Self {
-        static SOCKET_COUNT: AtomicUsize = AtomicUsize::new(0);
-        Self {
-            id: SOCKET_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
-            inner: Arc::new(tokio::sync::Mutex::new(inner)),
+
+#[cfg(feature = "frontend-websocket")]
+use sockets::WebSocket;
+#[cfg(feature = "frontend-websocket")]
+mod sockets {
+    use super::*;
+    #[derive(Clone)]
+    pub(super) struct WebSocket {
+        id: usize,
+        pub(super) inner: Arc<tokio::sync::Mutex<ws::stream::DuplexStream>>,
+    }
+    impl WebSocket {
+        pub(super) fn new(inner: ws::stream::DuplexStream) -> Self {
+            static SOCKET_COUNT: AtomicUsize = AtomicUsize::new(0);
+            Self {
+                id: SOCKET_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+                inner: Arc::new(tokio::sync::Mutex::new(inner)),
+            }
         }
     }
-}
-impl PartialEq for WebSocket {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
+    impl PartialEq for WebSocket {
+        fn eq(&self, other: &Self) -> bool {
+            self.id == other.id
+        }
     }
-}
-impl Eq for WebSocket {}
-impl std::hash::Hash for WebSocket {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
+    impl Eq for WebSocket {}
+    impl std::hash::Hash for WebSocket {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.id.hash(state);
+        }
     }
 }
 
 pub struct Website {
     config: Config,
     handle: StateHandle,
+    #[cfg(feature = "frontend-websocket")]
     websockets: Arc<RwLock<std::collections::HashSet<WebSocket>>>,
 }
 impl crate::NotificationProvider for Website {
@@ -67,6 +73,7 @@ impl crate::NotificationProvider for Website {
         Self {
             config,
             handle: state,
+            #[cfg(feature = "frontend-websocket")]
             websockets: Arc::new(RwLock::new(std::collections::HashSet::new())),
         }
     }
@@ -76,35 +83,39 @@ impl crate::NotificationProvider for Website {
     }
 
     fn send(&self, source_type: String, notification: Notification) {
-        let message = match notification.reason {
-            NotificationReason::WentOnline => api_types::WebSocketMessage::MinerStatusChange(api_types::StatusUpdate {
-                type_id: source_type,
-                id: notification.item_id.clone(),
-                new_status: true,
-            }),
-            NotificationReason::WentOffline => api_types::WebSocketMessage::MinerStatusChange(api_types::StatusUpdate {
-                type_id: source_type,
-                id: notification.item_id.clone(),
-                new_status: false,
-            }),
-            NotificationReason::Seen => api_types::WebSocketMessage::MinerPing {
-                type_id: source_type,
-                miner_id: notification.item_id,
-            }
-        };
-        let message_text = rocket::serde::json::to_string(&message).unwrap();
-        let message = ws::Message::Text(message_text);
-        self.websockets.read().iter().for_each(|websocket| {
-            let socket = websocket.clone();
-            let message = message.clone();
-            let sockets_ref = self.websockets.clone();
-
-            tokio::spawn(async move {
-                if let Err(_) = socket.inner.lock().await.send(message).await {
-                    sockets_ref.write().remove(&socket);
+        #[cfg(feature = "frontend-websocket")]
+        {
+            use rocket::futures::SinkExt;
+            let message = match notification.reason {
+                NotificationReason::WentOnline => api_types::WebSocketMessage::MinerStatusChange(api_types::StatusUpdate {
+                    type_id: source_type,
+                    id: notification.item_id.clone(),
+                    new_status: true,
+                }),
+                NotificationReason::WentOffline => api_types::WebSocketMessage::MinerStatusChange(api_types::StatusUpdate {
+                    type_id: source_type,
+                    id: notification.item_id.clone(),
+                    new_status: false,
+                }),
+                NotificationReason::Seen => api_types::WebSocketMessage::MinerPing {
+                    type_id: source_type,
+                    miner_id: notification.item_id,
                 }
+            };
+            let message_text = rocket::serde::json::to_string(&message).unwrap();
+            let message = ws::Message::Text(message_text);
+            self.websockets.read().iter().for_each(|websocket| {
+                let socket = websocket.clone();
+                let message = message.clone();
+                let sockets_ref = self.websockets.clone();
+
+                tokio::spawn(async move {
+                    if let Err(_) = socket.inner.lock().await.send(message).await {
+                        sockets_ref.write().remove(&socket);
+                    }
+                });
             });
-        });
+        }
     }
     fn handle_request<'r, 'l>(&self, path: Segments<Path>, request: &'r Request<'l>, data: Data<'r>) -> Outcome<'r> {
         macro_rules! respond_with {
@@ -146,14 +157,15 @@ impl crate::NotificationProvider for Website {
                 }).collect::<HashMap<_, _>>();
                 let text = match rocket::serde::json::to_string(&api_data) {
                     Ok(t) => t,
-                    Err(e) => {
-                        error!("{e}");
+                    Err(_e) => {
                         return Outcome::Error(rocket::http::Status::InternalServerError);
                     }
                 };
                 respond_with!(RawJson(text))
             },
+            #[cfg(feature = "frontend-websocket")]
             "ws" => {
+                use rocket::futures::FutureExt;
                 use rocket::request::FromRequest;
                 let rocket::request::Outcome::Success(socket) = pollster::block_on(ws::WebSocket::from_request(request)) else {
                     return Outcome::Error(rocket::http::Status::InternalServerError);

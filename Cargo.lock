@@ -287,17 +287,10 @@ checksum = "2a2330da5de22e8a3cb63252ce2abb30116bf5265e89c0e01bc17015ce30a476"
 
 [[package]]
 name = "dataminer-status-server"
-version = "1.0.1"
+version = "2.0.0"
 dependencies = [
- "api-types",
- "chrono",
- "lettre",
  "rocket",
- "rocket_ws",
- "serde",
  "state-management",
- "tokio",
- "toml 0.9.5",
 ]
 
 [[package]]
@@ -1977,12 +1970,11 @@ dependencies = [
 
 [[package]]
 name = "state-management"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "api-types",
  "chrono",
  "lettre",
- "log",
  "parking_lot",
  "pollster",
  "reqwest",

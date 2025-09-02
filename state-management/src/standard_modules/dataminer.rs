@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use log::info;
 use parking_lot::RwLock;
 use rocket::http::uri::fmt::Path;
 use rocket::http::uri::Segments;

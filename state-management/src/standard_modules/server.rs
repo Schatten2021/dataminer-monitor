@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use rocket::tokio;
 use crate::{StateHandle, Status};
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct ServerConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
@@ -17,8 +18,8 @@ struct ServerState {
 pub struct WebServerInfoProvider {
     config: HashMap<String, ServerConfig>,
     states: HashMap<String, Arc<parking_lot::RwLock<ServerState>>>,
-    task_handles: Vec<rocket::tokio::task::JoinHandle<()>>,
-    handle: crate::StateHandle,
+    task_handles: HashMap<String, rocket::tokio::task::JoinHandle<()>>,
+    handle: StateHandle,
 }
 impl crate::StatusProvider for WebServerInfoProvider {
     const ID: &'static str = "webserver";
@@ -31,7 +32,7 @@ impl crate::StatusProvider for WebServerInfoProvider {
                     last_seen: None, is_online: false
                 }));
                 let ticker = rocket::tokio::time::interval(config.interval.to_std().unwrap());
-                (rocket::tokio::task::spawn(start_listening(ticker, id.clone(), config.clone(), status.clone(), state.clone())), (id.clone(), status))
+               ((id.clone(), rocket::tokio::task::spawn(start_listening(ticker, id.clone(), config.clone(), status.clone(), state.clone()))), (id.clone(), status))
             })
             .collect();
         Self {
@@ -43,7 +44,35 @@ impl crate::StatusProvider for WebServerInfoProvider {
     }
 
     fn reconfigure(&mut self, config: Self::Config) {
-        // TODO: more expensive update
+        for id in self.config.keys().cloned().collect::<Vec<_>>().into_iter() {
+            if !config.contains_key(&id) {
+                self.config.remove(&id);
+                self.states.remove(&id);
+            }
+
+        }
+        for (id, new_config) in config.iter() {
+            match self.config.get_mut(id) {
+                Some(old_config) => {
+                    if old_config == new_config { continue; }
+                    self.config.insert(id.clone(), new_config.clone());
+                    let ticker = rocket::tokio::time::interval(new_config.interval.to_std().unwrap());
+                    let status = self.states[id].clone();
+                    // start a new task and abort the old one. No need to change the state (in fact changing it might have undesired effects).
+                    self.task_handles.insert(id.clone(), tokio::spawn(start_listening(ticker, id.clone(), new_config.clone(), status, self.handle.clone())))
+                        .unwrap().abort();
+                },
+                None => {
+                    let status = Arc::new(parking_lot::RwLock::new(ServerState {
+                        last_seen: None, is_online: false
+                    }));
+                    let ticker = rocket::tokio::time::interval(new_config.interval.to_std().unwrap());
+                    self.config.insert(id.clone(), new_config.clone());
+                    self.states.insert(id.clone(), status.clone());
+                    self.task_handles.insert(id.clone(), tokio::spawn(start_listening(ticker, id.clone(), new_config.clone(), status, self.handle.clone())));
+                }
+            }
+        }
         self.config = config;
     }
 
