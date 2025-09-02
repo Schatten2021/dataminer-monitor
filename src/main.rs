@@ -4,11 +4,16 @@
 // mod notifications;
 
 fn init_state() -> Result<state_management::State, ()> {
-    state_management::State::new()
-        .register_status_provider::<state_management::standard_modules::DataMinerInfoSource>()?
-        .register_status_provider::<state_management::standard_modules::WebServerInfoProvider>()?
-        .register_notification_provider::<state_management::standard_modules::EmailNotifications>()?
-        .register_notification_provider::<state_management::standard_modules::Website>()
+    let state = state_management::State::new();
+    #[cfg(feature = "dataminer-status-source")]
+    state.register_status_provider::<state_management::standard_modules::DataMinerInfoSource>()?;
+    #[cfg(feature = "server-status-source")]
+    state.register_status_provider::<state_management::standard_modules::WebServerInfoProvider>()?;
+    #[cfg(feature = "e-mail-notifications")]
+    state.register_notification_provider::<state_management::standard_modules::EmailNotifications>()?;
+    #[cfg(feature = "frontend-website")]
+    state.register_notification_provider::<state_management::standard_modules::Website>()?;
+    Ok(state)
 }
 
 #[rocket::launch]

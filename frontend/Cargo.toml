@@ -1,6 +1,6 @@
 [package]
 name = "frontend"
-version = "1.0.0"
+version = "2.0.0"
 authors = ["Schatten2020"]
 repository = "https://github.com/Schatten2021/dataminer-monitor"
 edition = "2024"

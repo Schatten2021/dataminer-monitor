@@ -31,7 +31,8 @@ impl crate::StatusProvider for WebServerInfoProvider {
                 let status = Arc::new(parking_lot::RwLock::new(ServerState {
                     last_seen: None, is_online: false
                 }));
-                let ticker = rocket::tokio::time::interval(config.interval.to_std().unwrap());
+                let mut ticker = rocket::tokio::time::interval(config.interval.to_std().unwrap());
+                ticker.set_missed_tick_behavior(rocket::tokio::time::MissedTickBehavior::Delay);
                ((id.clone(), rocket::tokio::task::spawn(start_listening(ticker, id.clone(), config.clone(), status.clone(), state.clone()))), (id.clone(), status))
             })
             .collect();
@@ -56,7 +57,8 @@ impl crate::StatusProvider for WebServerInfoProvider {
                 Some(old_config) => {
                     if old_config == new_config { continue; }
                     self.config.insert(id.clone(), new_config.clone());
-                    let ticker = rocket::tokio::time::interval(new_config.interval.to_std().unwrap());
+                    let mut ticker = rocket::tokio::time::interval(new_config.interval.to_std().unwrap());
+                    ticker.set_missed_tick_behavior(rocket::tokio::time::MissedTickBehavior::Delay);
                     let status = self.states[id].clone();
                     // start a new task and abort the old one. No need to change the state (in fact changing it might have undesired effects).
                     self.task_handles.insert(id.clone(), tokio::spawn(start_listening(ticker, id.clone(), new_config.clone(), status, self.handle.clone())))
@@ -66,7 +68,8 @@ impl crate::StatusProvider for WebServerInfoProvider {
                     let status = Arc::new(parking_lot::RwLock::new(ServerState {
                         last_seen: None, is_online: false
                     }));
-                    let ticker = rocket::tokio::time::interval(new_config.interval.to_std().unwrap());
+                    let mut ticker = rocket::tokio::time::interval(new_config.interval.to_std().unwrap());
+                    ticker.set_missed_tick_behavior(rocket::tokio::time::MissedTickBehavior::Delay);
                     self.config.insert(id.clone(), new_config.clone());
                     self.states.insert(id.clone(), status.clone());
                     self.task_handles.insert(id.clone(), tokio::spawn(start_listening(ticker, id.clone(), new_config.clone(), status, self.handle.clone())));

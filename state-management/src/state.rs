@@ -4,7 +4,9 @@ use rocket::route::Outcome;
 
 #[derive(serde::Serialize, serde::Deserialize, Default, Clone)]
 struct Config {
+    #[serde(default)]
     status: HashMap<String, toml::Value>,
+    #[serde(default)]
     notifications: HashMap<String, toml::Value>,
 }
 
