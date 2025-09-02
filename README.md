@@ -16,6 +16,9 @@ There are currently 2 `StatusProvider` and 2 `NotificationProvider`:
 - `email` (`NotificationProvider`, sends out E-Mails when a service goes on-/offline)
 - `webserver` (`NotificationProvider`, provides the front-end for the server)
 
+Note: `miners` are only able to expose routes that are part of their specific subroute (e.g. `/miner` for the Dataminer builtin).
+**This means that to ping the dataminer one must request `/miner/ping?id={id}`**
+
 # Configuration
 There are two basic configuration keys in the configuration file (`config.toml`): `status` & `notifications`.
 
