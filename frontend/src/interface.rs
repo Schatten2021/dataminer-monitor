@@ -1,4 +1,5 @@
-mod miner_status_display;
+mod element_status_display;
+mod category;
 
 use std::collections::HashMap;
 use yew::prelude::*;
@@ -69,12 +70,8 @@ impl Component for Main {
     }
     fn view(&self, _ctx: &Context<Self>) -> Html {
         self.statuses.iter().map(|(id, values)| {
-            let displays = values.iter().map(|v| html!(<miner_status_display::MinerStatusDisplay miner_status={v.clone()} />)).collect::<Html>();
             html!{
-                <>
-                <h1>{id}</h1>
-                { displays }
-                </>
+                <category::CategoryDisplay category_id={id.clone()} stati={values.clone()} />
             }
         }).collect::<Html>()
     }

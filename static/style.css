@@ -8,36 +8,47 @@ input {
     border-radius: 7px;
 }
 
-.main {
+#app {
     width: 100%;
     height: 100%;
-    border-color: white;
-    border-width: 3px;
-    border-style: ridge;
-    border-radius: 5px;
-    /*padding: 5px;*/
     box-sizing: border-box;
+    min-width: min-content;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
     display: grid;
-    grid-template-columns: minmax(10%, max-content) 1fr;
-    grid-template-rows: 1fr minmax(min-content, max-content);
-    overflow: hidden;
 }
 
-.miner {
+.status-category {
     border-radius: 5px;
-    border-color: lightgrey;
-    border-width: 1px;
+    border-color: lightgray;
     background-color: #444;
     padding: 4px;
+    margin: 10px;
+    width: auto;
+    min-width: min-content;
+    height: fit-content;
     position: relative;
-    width: fit-content;
+    box-sizing: border-box;
 }
-.miner-name {
+.status-category-id {}
+
+.status-display {
+    border-color: #FFF;
+    border-top-width: 1px;
+    border-top-style: dashed;
+    position: relative;
+    padding: 4px;
+    left: 0;
+    right: 0;
 }
-.miner-status {
+.status-display-name {
+}
+.status {
     color: red;
     padding-right: 5px;
 }
-.miner-status-active {
+.status-active {
     color: green;
+}
+.status-display-seen {
+
 }
