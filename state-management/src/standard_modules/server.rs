@@ -1,12 +1,24 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use rocket::tokio;
 use crate::{StateHandle, Status};
+fn status_ok() -> HashSet<u16> {
+    HashSet::from([200])
+}
+fn status_err() -> HashSet<u16> {
+    // client error: 400 - 499
+    // server error: 500 - 599
+    (400..600).collect()
+}
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct ServerConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
+    #[serde(default="status_ok")]
+    expected_status: HashSet<u16>,
+    #[serde(default="status_err")]
+    rejected_status: HashSet<u16>,
     url: String,
     interval: chrono::Duration,
 }
@@ -94,6 +106,14 @@ async fn start_listening(mut ticker: rocket::tokio::time::Interval, id: String, 
         ticker.tick().await;
         match (async || {
             let Ok(response) = reqwest::get(&config.url).await else {return Err(())};
+            let status = response.status().as_u16();
+            if config.expected_status.contains(&status) {
+                return Ok(())
+            }
+            if config.rejected_status.contains(&status) {
+                return Err(())
+            }
+            // default to error for errored responses.
             response.error_for_status().map_err(drop).map(drop)
         })().await {
             Ok(()) => {

@@ -66,11 +66,13 @@ Websites are configurable via the `status.webserver` key.
 
 They have the following fields:
 
-| field            | type             | description                                                              | 
-|------------------|------------------|--------------------------------------------------------------------------|
-| url              | string           | The url which will get pinged (Note: **This url must support GET**)      |
-| interval         | [number, number] | The interval in which to ping the server (format see Dataminer::timeout) |
-| name (optional)  | string           | see Dataminer::name                                                      |
+| field           | type             | description                                                                                                                            | 
+|-----------------|------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| url             | string           | The url which will get pinged (Note: **This url must support GET**)                                                                    |
+| interval        | [number, number] | The interval in which to ping the server (format see Dataminer::timeout)                                                               |
+| name (optional) | string           | see Dataminer::name                                                                                                                    |
+| expected_status | [number,...]     | A list of expected status codes. This can be used to overwrite the accepted status codes (i.e. for sites requiring login adding a 401) |
+| rejected_status | [number,...]     | Similar to expected_status. Defaults to the range of 400 - 599 (client error + Server error). Note that expected_status has priority.  | 
 
 An example website:
 ```toml
