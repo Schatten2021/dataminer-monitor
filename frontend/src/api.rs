@@ -16,7 +16,7 @@ pub async fn get_all_stati() -> Result<api_types::AllStatiResponse, gloo_net::Er
 }
 pub fn subscribe(callback: yew::Callback<WebSocketMessage>) -> Result<(), wasm_bindgen::JsError> {
     println!("subscribing to websocket");
-    let mut socket = gloo_net::websocket::futures::WebSocket::open(&*build_url("ws"))?;
+    let mut socket = gloo_net::websocket::futures::WebSocket::open(&*build_url("api/ws"))?;
     crate::spawn(async move {
         use futures_util::StreamExt;
         while let Some(Ok(message)) = socket.next().await {

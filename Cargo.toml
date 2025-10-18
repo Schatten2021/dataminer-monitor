@@ -10,7 +10,7 @@ e-mail-notifications = ["default-providers/email-notification-provider"]
 dataminer-status-source = ["default-providers/dataminer-status-provider"]
 server-status-source = ["default-providers/website-status-provider"]
 frontend-website = ["default-providers/website-notification-provider", "default-providers/website-notification-provider-hot-reload"]
-frontend-websocket = ["default-providers/website-notification-provider-websockets"]
+frontend-websocket = ["default-providers/api-notification-provider-websockets"]
 
 all-notifications = ["e-mail-notifications", "frontend-website", "frontend-websocket"]
 all-data-sources = ["dataminer-status-source", "server-status-source"]
