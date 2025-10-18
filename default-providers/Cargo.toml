@@ -1,0 +1,48 @@
+[package]
+name = "default-providers"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+# status providers
+dataminer-status-provider = ["chrono/serde", "dep:parking_lot", "serde/derive", "dep:rocket", "state-management/rocket-integration"]
+website-status-provider = ["chrono/serde", "dep:parking_lot", "serde/derive", "dep:reqwest", "dep:tokio"]
+
+# notification providers
+email-notification-provider = ["serde/derive", "lettre/smtp-transport"]
+website-notification-provider = ["dep:rocket", "state-management/rocket-integration", "dep:api-types", "rocket/json"]
+website-notification-provider-websockets = ["website-notification-provider", "dep:ws", "dep:parking_lot"]
+website-notification-provider-hot-reload = ["website-notification-provider"]
+website-notification-provider-include-default-website = ["website-notification-provider"]
+
+# other
+logging = ["dep:log"]
+
+# summaries
+status-provider = ["dataminer-status-provider", "website-status-provider"]
+notification-provider = ["email-notification-provider", "website-notification-provider"]
+all-provider = ["status-provider", "notification-provider"]
+
+default = ["all-provider", "logging", "website-notification-provider-hot-reload", "website-notification-provider-websockets", "website-notification-provider-include-default-website"]
+
+[dependencies]
+# all
+state-management = { path = "../state-management", default-features = false }
+serde = { version = "1.0.228", optional = true }
+log = { version = "0.4.27", optional = true }
+# except E-Mail notification provider
+parking_lot = { version = "0.12.5", optional = true }
+
+# dataminer + website status provider
+chrono = { version = "0.4.42", optional = true }
+tokio = { version = "1.47.1", optional = true }
+# dataminer specific
+rocket = { version = "0.5.1", optional = true }
+# website status provider
+reqwest = { version = "0.12.24", optional = true }
+
+# e-mail notification provider
+lettre = { version = "0.11.19", optional = true }
+# website notification provider
+api-types = { path = "../api-types", optional = true }
+ws = { version = "0.1.1", package = "rocket_ws", optional = true}

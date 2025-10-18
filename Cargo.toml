@@ -6,18 +6,19 @@ edition = "2024"
 
 [features]
 
-e-mail-notifications = ["state-management/e-mail-notifications"]
-dataminer-status-source = ["state-management/dataminer-status-source"]
-server-status-source = ["state-management/server-status-source"]
-frontend-website = ["state-management/frontend-website"]
-frontend-websocket = ["state-management/frontend-websocket"]
+e-mail-notifications = ["default-providers/email-notification-provider"]
+dataminer-status-source = ["default-providers/dataminer-status-provider"]
+server-status-source = ["default-providers/website-status-provider"]
+frontend-website = ["default-providers/website-notification-provider", "default-providers/website-notification-provider-hot-reload"]
+frontend-websocket = ["default-providers/website-notification-provider-websockets"]
 
-all-notifications = ["state-management/all-notifications", "e-mail-notifications", "frontend-website", "frontend-websocket"]
-all-data-sources = ["state-management/all-data-sources", "dataminer-status-source", "server-status-source"]
+all-notifications = ["e-mail-notifications", "frontend-website", "frontend-websocket"]
+all-data-sources = ["dataminer-status-source", "server-status-source"]
 
-default = ["state-management/default", "all-notifications", "all-data-sources"]
+default = ["state-management/default", "all-notifications", "all-data-sources", "default-providers/logging"]
 
 [dependencies]
 # core server functionality
 rocket = { version = "0.5.1", features = ["json"] }
 state-management = { path = "state-management", default-features = false }
+default-providers = { path = "default-providers", features = ["all-provider"] }

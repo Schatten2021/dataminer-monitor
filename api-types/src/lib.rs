@@ -18,6 +18,6 @@ pub enum WebSocketMessage {
     MinerStatusChange(StatusUpdate),
     MinerPing {
         type_id: String,
-        miner_id: String,
+        id: String,
     },
 }
