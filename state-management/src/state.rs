@@ -18,7 +18,7 @@ pub(crate) struct State {
     #[cfg(feature = "rocket-integration")]
     tokio_runtime_handle: rocket::tokio::runtime::Handle,
     status_providers: HashMap<String, Box<dyn StatusProvider>>,
-    notification_providers: HashMap<String, Box<dyn NotificationProvider>>,
+    notification_providers: HashMap<String, std::sync::Arc<parking_lot::RwLock<dyn NotificationProvider>>>,
 }
 impl State {
     fn load_config(path: impl AsRef<std::path::Path>) -> Config {
@@ -51,7 +51,7 @@ impl State {
         if self.notification_providers.contains_key(T::ID) { return Err(()) }
         let config = self.config.notifications.get(T::ID).cloned();
         let provider = <T as crate::NotificationProvider>::new(handle, config.map(<T::Config as serde::Deserialize>::deserialize).map(Result::unwrap_or_default).unwrap_or_default());
-        self.notification_providers.insert(T::ID.to_string(), Box::new(provider));
+        self.notification_providers.insert(T::ID.to_string(), std::sync::Arc::new(parking_lot::RwLock::new(provider)));
         Ok(())
     }
     pub(crate) fn unregister_notification_provider(&mut self, id: &str) {
@@ -64,7 +64,7 @@ impl State {
             status_provider.reconfigure(self.config.status.get(id).cloned());
         }
         for (id, notification_provider) in self.notification_providers.iter_mut() {
-            notification_provider.reconfigure(self.config.notifications.get(id).cloned());
+            notification_provider.write().reconfigure(self.config.notifications.get(id).cloned());
         }
     }
     pub(crate) fn send_notification(&self, source_type_id: &str, message: crate::notifications::Notification) {
@@ -72,7 +72,14 @@ impl State {
         #[cfg(feature = "rocket-integration")]
         let _tokio_guard = self.tokio_runtime_handle.enter();
         self.notification_providers.values()
-            .for_each(|p| p.send(source_type_id.clone(), message.clone()));
+            .for_each(|p| {
+                let p = p.clone();
+                let source_type_id = source_type_id.clone();
+                let message = message.clone();
+                self.tokio_runtime_handle.spawn(async move {
+                    p.read().send(source_type_id.clone(), message.clone())
+                });
+            });
     }
     pub(crate) fn get_all_stati(&self) -> HashMap<String, HashMap<String, crate::Status>> {
         self.status_providers.iter()
@@ -108,7 +115,7 @@ impl rocket::route::Handler for crate::State {
             }
         };
         for provider in self.0.read().notification_providers.values() {
-            match provider.handle_request(original_path.clone(), request, data) {
+            match provider.read().handle_request(original_path.clone(), request, data) {
                 rocket::route::Outcome::Forward((result_data, _status)) => {data = result_data},
                 v => return v,
             }
