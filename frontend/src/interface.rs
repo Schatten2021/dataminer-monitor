@@ -59,7 +59,7 @@ impl Component for Main {
                         let Some(status) = self.get_status_mut(&type_id, &id) else { return false };
                         status.is_online = new_status;
                     },
-                    WebSocketMessage::MinerPing { type_id, miner_id } => {
+                    WebSocketMessage::MinerPing { type_id, id: miner_id } => {
                         let Some(status) = self.get_status_mut(&type_id, &miner_id) else { return false };
                         status.last_seen = Some(chrono::Local::now());
                     }

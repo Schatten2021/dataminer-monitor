@@ -4,15 +4,15 @@
 // mod notifications;
 
 fn init_state() -> Result<state_management::State, ()> {
-    let state = state_management::State::new();
+    let state = state_management::State::default();
     #[cfg(feature = "dataminer-status-source")]
-    state.register_status_provider::<state_management::standard_modules::DataMinerInfoSource>()?;
+    state.register_status_provider::<default_providers::status_providers::DataminerStatusProvider>()?;
     #[cfg(feature = "server-status-source")]
-    state.register_status_provider::<state_management::standard_modules::WebServerInfoProvider>()?;
+    state.register_status_provider::<default_providers::status_providers::ServerStatusProvider>()?;
     #[cfg(feature = "e-mail-notifications")]
-    state.register_notification_provider::<state_management::standard_modules::EmailNotifications>()?;
+    state.register_notification_provider::<default_providers::notification_providers::EmailNotificationProvider>()?;
     #[cfg(feature = "frontend-website")]
-    state.register_notification_provider::<state_management::standard_modules::Website>()?;
+    state.register_notification_provider::<default_providers::notification_providers::WebsiteNotificationProvider>()?;
     Ok(state)
 }
 
