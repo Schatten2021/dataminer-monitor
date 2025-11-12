@@ -9,6 +9,8 @@ fn init_state() -> Result<state_management::State, ()> {
     state.register_status_provider::<default_providers::status_providers::DataminerStatusProvider>()?;
     #[cfg(feature = "server-status-source")]
     state.register_status_provider::<default_providers::status_providers::ServerStatusProvider>()?;
+    #[cfg(feature = "minecraft-server-status-source")]
+    state.register_status_provider::<default_providers::status_providers::MinecraftStatusProvider>()?;
     #[cfg(feature = "e-mail-notifications")]
     state.register_notification_provider::<default_providers::notification_providers::EmailNotificationProvider>()?;
     #[cfg(feature = "frontend-website")]

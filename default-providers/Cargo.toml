@@ -7,6 +7,7 @@ edition = "2024"
 # status providers
 dataminer-status-provider = ["chrono/serde", "dep:parking_lot", "serde/derive", "dep:rocket", "state-management/rocket-integration"]
 website-status-provider = ["chrono/serde", "dep:parking_lot", "serde/derive", "dep:reqwest", "dep:tokio"]
+minecraft-status-provider = ["dep:minecraft-net", "dep:parking_lot", "chrono/serde"]
 
 # notification providers
 email-notification-provider = ["serde/derive", "lettre/smtp-transport"]
@@ -20,8 +21,8 @@ website-notification-provider-include-default-website = ["website-notification-p
 logging = ["dep:log"]
 
 # summaries
-status-provider = ["dataminer-status-provider", "website-status-provider"]
-notification-provider = ["email-notification-provider", "api-notification-provider"]
+status-provider = ["dataminer-status-provider", "website-status-provider", "minecraft-status-provider"]
+notification-provider = ["email-notification-provider", "api-notification-provider", "website-notification-provider"]
 all-provider = ["status-provider", "notification-provider"]
 
 default = ["all-provider", "logging", "website-notification-provider-hot-reload", "api-notification-provider-websockets", "website-notification-provider-include-default-website"]
@@ -41,6 +42,8 @@ tokio = { version = "1.47.1", optional = true }
 rocket = { version = "0.5.1", optional = true }
 # website status provider
 reqwest = { version = "0.12.24", optional = true }
+# minecraft status provider
+minecraft-net = { version = "0.1.0", optional = true }
 
 # e-mail notification provider
 lettre = { version = "0.11.19", optional = true }

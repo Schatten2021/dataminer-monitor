@@ -82,6 +82,33 @@ interval = [3600, 0]
 name = "Example website"
 ```
 
+### Minecraft
+Minecraft java servers are configurable via the `status.minecraft.java` key.
+
+They have the following fields:
+
+| field               | type             | description                                                               |
+|---------------------|------------------|---------------------------------------------------------------------------|
+| url                 | string           | The url which will get pinged                                             |
+| port (optional)     | number           | The port the server is running on. (defaults to 25565)                    |
+| interval (optional) | [number, number] | The interval in which to ping the server (format see Dataminer::timeout,) |
+| name (optional)     | string           | see Dataminer::name                                                       |
+
+An example Minecraft java server:
+```toml
+[status.minecraft.java.example]
+url = "example.com"
+port = 25565
+interval = [3600, 0]
+name = "Example minecraft server"
+```
+usually:
+```toml
+[status.minecraft.java.example]
+url = "example.com"
+name = "Example minecraft server"
+```
+
 ## `NotificationProvider`
 ### E-Mail
 E-Mail notifications are configurable under `notifications.email`.

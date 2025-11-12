@@ -9,13 +9,14 @@ edition = "2024"
 e-mail-notifications = ["default-providers/email-notification-provider"]
 dataminer-status-source = ["default-providers/dataminer-status-provider"]
 server-status-source = ["default-providers/website-status-provider"]
-frontend-website = ["default-providers/website-notification-provider", "default-providers/website-notification-provider-hot-reload"]
+minecraft-server-status-source = ["default-providers/minecraft-status-provider"]
+frontend-website = ["default-providers/website-notification-provider"]
 frontend-websocket = ["default-providers/api-notification-provider-websockets"]
 
 all-notifications = ["e-mail-notifications", "frontend-website", "frontend-websocket"]
-all-data-sources = ["dataminer-status-source", "server-status-source"]
+all-data-sources = ["dataminer-status-source", "server-status-source", "minecraft-server-status-source"]
 
-default = ["state-management/default", "all-notifications", "all-data-sources", "default-providers/logging"]
+default = ["state-management/default", "all-notifications", "all-data-sources", "default-providers/logging", "default-providers/website-notification-provider-hot-reload"]
 
 [dependencies]
 # core server functionality
