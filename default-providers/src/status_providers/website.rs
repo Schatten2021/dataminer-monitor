@@ -37,7 +37,7 @@ pub struct ServerStatusProvider {
     state_handle: state_management::StateHandle,
 }
 impl state_management::StatusProvider for ServerStatusProvider {
-    const ID: &'static str = "server";
+    const ID: &'static str = "webserver";
     const NAME: &'static str = "Websites";
     type Config = HashMap<String, Config>;
     fn new(state_handle: state_management::StateHandle, config: Self::Config) -> Self {

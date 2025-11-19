@@ -51,7 +51,7 @@ They have the following fields:
 
 | field           | type             | description                                                                                                                            |
 |-----------------|------------------|----------------------------------------------------------------------------------------------------------------------------------------|
-| timout          | [number, number] | This is the duration after which the miner will timout (format [seconds, nanoseconds] due to [chrono](https://crates.io/crates/chrono) |
+| timeout         | [number, number] | This is the duration after which the miner will timout (format [seconds, nanoseconds] due to [chrono](https://crates.io/crates/chrono) |
 | name (optional) | string           | The name under which the miner will be referenced in notifications                                                                     |
 
 An example miner:
@@ -66,20 +66,22 @@ Websites are configurable via the `status.webserver` key.
 
 They have the following fields:
 
-| field           | type             | description                                                                                                                            | 
-|-----------------|------------------|----------------------------------------------------------------------------------------------------------------------------------------|
-| url             | string           | The url which will get pinged (Note: **This url must support GET**)                                                                    |
-| interval        | [number, number] | The interval in which to ping the server (format see Dataminer::timeout)                                                               |
-| name (optional) | string           | see Dataminer::name                                                                                                                    |
-| expected_status | [number,...]     | A list of expected status codes. This can be used to overwrite the accepted status codes (i.e. for sites requiring login adding a 401) |
-| rejected_status | [number,...]     | Similar to expected_status. Defaults to the range of 400 - 599 (client error + Server error). Note that expected_status has priority.  | 
+| field                     | type             | description                                                                                                                            | 
+|---------------------------|------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| url                       | string           | The url which will get pinged (Note: **This url must support GET**)                                                                    |
+| interval                  | [number, number] | The interval in which to ping the server (format see Dataminer::timeout)                                                               |
+| name (optional)           | string           | see Dataminer::name                                                                                                                    |
+| accepted_stati (optional) | [number,...]     | A list of expected status codes. This can be used to overwrite the accepted status codes (i.e. for sites requiring login adding a 401) |
+| rejected_stati (optional) | [number,...]     | Similar to expected_status. Defaults to the range of 400 - 599 (client error + Server error). Note that expected_status has priority.  | 
 
 An example website:
 ```toml
 [status.webserver.foo]
-url = "https://example.com/"
+url = "https://login.example.com/"
 interval = [3600, 0]
 name = "Example website"
+accepted_stati = [401]
+rejected_stati = [200]
 ```
 
 ### Minecraft

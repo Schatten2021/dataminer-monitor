@@ -65,7 +65,7 @@ impl MinecraftStatusProvider {
                             ($reason:ident) => {
                                 state.send_notification(state_management::Notification {
                                     item_name: if conf.name != "" { conf.name.clone()} else {cloned_id.clone()},
-                                    item_id: cloned_id.clone(),
+                                    item_id: format!("java.{}", cloned_id),
                                     reason: NotificationReason::$reason
                                 })
                             }
