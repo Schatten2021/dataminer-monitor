@@ -152,3 +152,10 @@ fn spawn_listen_task(id: String, config: Config, status: std::sync::Arc<parking_
         }
     })
 }
+impl core::ops::Drop for ServerStatusProvider {
+    fn drop(&mut self) {
+        for handle in self.task_handles.values() {
+            handle.abort();
+        }
+    }
+}

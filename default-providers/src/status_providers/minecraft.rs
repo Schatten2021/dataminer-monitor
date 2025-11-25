@@ -129,3 +129,9 @@ impl state_management::StatusProvider for MinecraftStatusProvider {
             .collect()
     }
 }
+impl core::ops::Drop for MinecraftStatusProvider {
+    fn drop(&mut self) {
+        self.stati.java.values_mut()
+            .for_each(|(_, handle)| handle.abort());
+    }
+}
