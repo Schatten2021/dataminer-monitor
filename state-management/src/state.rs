@@ -1,7 +1,7 @@
 mod status_provider_wrapper;
 mod notification_provider_wrapper;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use status_provider_wrapper::StatusProvider;
 use notification_provider_wrapper::NotificationProvider;
 
@@ -11,6 +11,15 @@ struct Config {
     status: HashMap<String, toml::Value>,
     #[serde(default)]
     notifications: HashMap<String, toml::Value>,
+    #[serde(default)]
+    disabled: DisabledConfig,
+}
+#[derive(serde::Serialize, serde::Deserialize, Debug, Default, Clone)]
+struct DisabledConfig {
+    #[serde(default)]
+    status: HashSet<String>,
+    #[serde(default)]
+    notifications: HashSet<String>,
 }
 
 pub(crate) struct State {
@@ -38,6 +47,7 @@ impl State {
     }
     pub(crate) fn register_status_provider<T: crate::StatusProvider>(&mut self, handle: crate::StateHandle) -> Result<(), ()> {
         if self.status_providers.contains_key(T::ID) { return Err(()) }
+        if self.config.disabled.status.contains(T::ID) { return Ok(()) }
         let config = self.config.status.get(T::ID).cloned();
         let provider = <T as crate::StatusProvider>::new(handle, config.map(<T::Config as serde::Deserialize>::deserialize).map(Result::unwrap_or_default).unwrap_or_default());
         self.status_providers.insert(T::ID.to_string(), Box::new(provider));
@@ -49,6 +59,7 @@ impl State {
 
     pub(crate) fn register_notification_provider<T: crate::NotificationProvider>(&mut self, handle: crate::StateHandle) -> Result<(), ()> {
         if self.notification_providers.contains_key(T::ID) { return Err(()) }
+        if self.config.disabled.notifications.contains(T::ID) { return Ok(()); }
         let config = self.config.notifications.get(T::ID).cloned();
         let provider = <T as crate::NotificationProvider>::new(handle, config.map(<T::Config as serde::Deserialize>::deserialize).map(Result::unwrap_or_default).unwrap_or_default());
         self.notification_providers.insert(T::ID.to_string(), std::sync::Arc::new(parking_lot::RwLock::new(provider)));
@@ -60,6 +71,12 @@ impl State {
 
     pub(crate) fn reload_config(&mut self, path: impl AsRef<std::path::Path>) {
         self.config = Self::load_config(path);
+        for status_provider_id in &self.config.disabled.status {
+            self.status_providers.remove(status_provider_id);
+        }
+        for notification_provider_id in &self.config.disabled.notifications {
+            self.notification_providers.remove(notification_provider_id);
+        }
         for (id, status_provider) in self.status_providers.iter_mut() {
             status_provider.reconfigure(self.config.status.get(id).cloned());
         }

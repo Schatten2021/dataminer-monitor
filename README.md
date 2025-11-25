@@ -131,3 +131,17 @@ This controls the location for the hot-reload attempts (default is "static/" whi
 ## Rocket
 Rocket is configured the same way that any rocket server would be, via a `Rocket.toml` file.
 For more details please consult the [rocket documentation](https://rocket.rs/guide/master/configuration/).
+
+## Disabling providers
+You can manually disable StatusProvider & NotificationProvider via the config.
+This makes it so that they are also not present in the api or the website without requiring recompilation.
+
+You can disable certain providers by adding them in the `[disabled]` section of the config.
+(Note: add them to `disabled.status` or `disabled.notifications`)
+
+Example:
+```toml
+[disabled]
+status = ["dataminer"]
+notifications = ["email"]
+```
