@@ -10,7 +10,7 @@ website-status-provider = ["chrono/serde", "dep:parking_lot", "serde/derive", "d
 minecraft-status-provider = ["dep:minecraft-net", "dep:parking_lot", "chrono/serde"]
 
 # notification providers
-email-notification-provider = ["serde/derive", "lettre/smtp-transport"]
+email-notification-provider = ["serde/derive", "lettre/smtp-transport", "state-management/serde-traits"]
 api-notification-provider = ["dep:rocket", "state-management/rocket-integration", "dep:api-types", "rocket/json"]
 api-notification-provider-websockets = ["api-notification-provider", "dep:ws", "dep:parking_lot"]
 website-notification-provider = ["dep:rocket", "state-management/rocket-integration", "api-notification-provider"]

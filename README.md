@@ -117,12 +117,22 @@ E-Mail notifications are configurable under `notifications.email`.
 
 They have the following fields:
 
-| field       | type           | description                                                                                                          | 
-|-------------|----------------|----------------------------------------------------------------------------------------------------------------------|
-| address     | string         | The E-Mail address to be used when sending E-Mails (Note: Must be the same as when logging in into the E-Mail-Server |
-| password    | string         | The E-Mail password for the account (yes this is currently plaintext)                                                | 
-| server      | string         | The Address of the E-Mail-Server that is connected to (this is currently not read from the E-Mail)                   |
-| subscribers | [strings, ...] | A list of the E-Mail-Addresses that are to be notified of changes                                                    |
+| field       | type                    | description                                                                                                                                 | 
+|-------------|-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| address     | string                  | The E-Mail address to be used when sending E-Mails (Note: Must be the same as when logging in into the E-Mail-Server                        |
+| password    | string                  | The E-Mail password for the account (yes this is currently plaintext)                                                                       | 
+| server      | string                  | The Address of the E-Mail-Server that is connected to (this is currently not read from the E-Mail)                                          |
+| whitelist   | [string, ...] optional  | Notification types to send (Custom, Seen, WentOnline or WentOffline). Any other types will not be sent. Mutually exclusive with `blacklist` |
+| blacklist   | [string, ...] optional  | Notification types _not_ to send. Opposite of and mutually exclusive with `whitelist`. Any other types _will_ be sent.                      |
+| subscribers | [string or custom, ...] | A list of the E-Mail-Addresses that are to be notified of changes                                                                           |
+
+A "custom" subscriber has the following fields:
+
+| field       | type                    | description                                                               |
+|-------------|-------------------------|---------------------------------------------------------------------------|
+| email       | string                  | The E-Mail-Address that a notification will be sent to                    |
+| whitelist   | [string]                | Which notifications to send. See `[notifications.email.whitelist]`        |
+| blacklist   | [string]                | Which notification types _not_ to send. `[notifications.email.blacklist]` |
 
 ### Website
 The Website currently only has one configuration: `notifications.website.static_dir`.

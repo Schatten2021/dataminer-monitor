@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 fn default_name() -> String { "No Reply".to_string() }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq, Debug)]
@@ -7,7 +9,9 @@ pub struct Config {
     server: String,
     #[serde(default="default_name")]
     name: String,
-    subscribers: Vec<String>,
+    subscribers: Vec<Subscriber>,
+    #[serde(flatten)]
+    behaviour: Option<Filter>,
 }
 impl Default for Config {
     fn default() -> Self {
@@ -19,6 +23,57 @@ impl Default for Config {
             server: Default::default(),
             name: default_name(),
             subscribers: Default::default(),
+            behaviour: Default::default(),
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq, Debug)]
+pub enum Subscriber {
+    #[serde(untagged)]
+    Default(String),
+    #[serde(untagged)]
+    Custom {
+        #[serde(alias="address", alias="mail", alias="to")]
+        email: String,
+        #[serde(flatten, default)]
+        behaviour: Filter,
+    },
+}
+impl Subscriber {
+    const fn get_email(&self) -> &'_ String {
+        match self {
+            Subscriber::Default(address) => address,
+            Subscriber::Custom { email, .. } => email,
+        }
+    }
+    fn allows(&self, reason: &state_management::NotificationReason) -> bool {
+        match self {
+            Subscriber::Custom { behaviour, .. } => behaviour.allows(reason),
+            _ => true,
+        }
+    }
+}
+#[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq, Debug)]
+pub enum Filter {
+    #[serde(alias="white list", alias="whitelist", alias="allow", alias="send", alias="accept", alias="accepted")]
+    WhiteList(HashSet<state_management::NotificationReason>),
+    #[serde(alias="blacklist", alias="black list", alias="deny", alias="reject", alias="rejected", alias="filter")]
+    BlackList(HashSet<state_management::NotificationReason>),
+    #[serde(other)]
+    Default,
+}
+impl Default for Filter {
+    fn default() -> Self {
+        Filter::BlackList(HashSet::from([state_management::NotificationReason::Seen]))
+    }
+}
+impl Filter {
+    pub fn allows(&self, reason: &state_management::NotificationReason) -> bool {
+        match self {
+            Filter::WhiteList(whitelist) => whitelist.contains(reason),
+            Filter::BlackList(blacklist) => !blacklist.contains(reason),
+            Filter::Default => *reason == state_management::NotificationReason::Seen,
         }
     }
 }
@@ -43,7 +98,7 @@ impl state_management::NotificationProvider for EmailNotificationProvider {
         self.config = config;
     }
     fn send(&self, source_id: String, notification: state_management::Notification) {
-        if notification.reason == state_management::NotificationReason::Seen { return; }
+        if !self.config.behaviour.clone().unwrap_or_default().allows(&notification.reason) { return; }
         let cloned = self.clone();
         std::thread::spawn(move || {
             if let Err(e) = cloned.send_message(
@@ -57,7 +112,8 @@ impl state_management::NotificationProvider for EmailNotificationProvider {
                     state_management::NotificationReason::WentOffline => "Might need to do something",
                     state_management::NotificationReason::Seen => "Probably Ok",
                     state_management::NotificationReason::Other(v) => v,
-                })
+                }),
+                notification.reason.clone()
             ) {
                 #[cfg(feature = "logging")]
                 log::error!("Failed to send notification for {} because: {:?}", notification.reason, e);
@@ -66,7 +122,7 @@ impl state_management::NotificationProvider for EmailNotificationProvider {
     }
 }
 impl EmailNotificationProvider {
-    fn send_message(self, subject: String, body: impl lettre::message::IntoBody + Clone) -> Result<(), Box<dyn std::error::Error>> {
+    fn send_message(self, subject: String, body: impl lettre::message::IntoBody + Clone, reason: state_management::NotificationReason) -> Result<(), Box<dyn std::error::Error>> {
         use lettre::Transport;
         let mailer = lettre::transport::smtp::SmtpTransport::relay(&self.config.server)?
             .credentials(self.credentials)
@@ -76,8 +132,9 @@ impl EmailNotificationProvider {
             .subject(subject)
             .header(lettre::message::header::ContentType::TEXT_HTML);
         for target in self.config.subscribers {
+            if !target.allows(&reason) { continue; }
             mailer.send(&builder_preset.clone()
-                .to(target.parse()?)
+                .to(target.get_email().parse()?)
                 .body(body.clone())?)?;
         }
         Ok(())

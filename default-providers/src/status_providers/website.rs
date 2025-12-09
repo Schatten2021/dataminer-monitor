@@ -10,9 +10,13 @@ pub struct Config {
     url: String,
     #[serde(default="hourly")]
     interval: chrono::Duration,
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default, skip_serializing_if = "HashSet::is_empty", alias="accept", alias="accepted")]
+    #[serde(alias="accepted-stati", alias="accept_stati", alias="accept-stati")]
+    #[serde(alias="accepted-statuses", alias="accept-statuses", alias="accepted_statuses", alias="accept_statuses", alias="accept_statuses")]
     accepted_stati: HashSet<u16>,
-    #[serde(default, skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default, skip_serializing_if = "HashSet::is_empty", alias="reject", alias = "rejected")]
+    #[serde(alias="rejected-stati", alias="reject_stati", alias="reject-stati")]
+    #[serde(alias="rejected-statuses", alias="reject-statuses", alias="rejected_statuses", alias="reject_statuses", alias="reject_statuses")]
     rejected_stati: HashSet<u16>,
 }
 impl Default for Config {

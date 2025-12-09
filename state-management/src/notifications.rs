@@ -6,9 +6,13 @@ pub struct Notification {
     pub reason: NotificationReason,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde-traits", derive(serde::Serialize, serde::Deserialize))]
 pub enum NotificationReason {
+    #[serde(alias="went-online")]
     WentOnline,
+    #[serde(alias="went-offline")]
     WentOffline,
+    #[serde(alias="ping", alias="pings")]
     Seen,
     Other(String),
 }
