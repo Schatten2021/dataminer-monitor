@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use super::Filter;
 
 fn default_name() -> String { "No Reply".to_string() }
 
@@ -51,29 +51,6 @@ impl Subscriber {
         match self {
             Subscriber::Custom { behaviour, .. } => behaviour.allows(reason),
             _ => true,
-        }
-    }
-}
-#[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq, Debug)]
-pub enum Filter {
-    #[serde(alias="white list", alias="whitelist", alias="allow", alias="send", alias="accept", alias="accepted")]
-    WhiteList(HashSet<state_management::NotificationReason>),
-    #[serde(alias="blacklist", alias="black list", alias="deny", alias="reject", alias="rejected", alias="filter")]
-    BlackList(HashSet<state_management::NotificationReason>),
-    #[serde(other)]
-    Default,
-}
-impl Default for Filter {
-    fn default() -> Self {
-        Filter::BlackList(HashSet::from([state_management::NotificationReason::Seen]))
-    }
-}
-impl Filter {
-    pub fn allows(&self, reason: &state_management::NotificationReason) -> bool {
-        match self {
-            Filter::WhiteList(whitelist) => whitelist.contains(reason),
-            Filter::BlackList(blacklist) => !blacklist.contains(reason),
-            Filter::Default => *reason == state_management::NotificationReason::Seen,
         }
     }
 }

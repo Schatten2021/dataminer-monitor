@@ -128,15 +128,27 @@ They have the following fields:
 
 A "custom" subscriber has the following fields:
 
-| field       | type                    | description                                                               |
-|-------------|-------------------------|---------------------------------------------------------------------------|
-| email       | string                  | The E-Mail-Address that a notification will be sent to                    |
-| whitelist   | [string]                | Which notifications to send. See `[notifications.email.whitelist]`        |
-| blacklist   | [string]                | Which notification types _not_ to send. `[notifications.email.blacklist]` |
+| field       | type     | description                                                               |
+|-------------|----------|---------------------------------------------------------------------------|
+| email       | string   | The E-Mail-Address that a notification will be sent to                    |
+| whitelist   | [string] | Which notifications to send. See `[notifications.email.whitelist]`        |
+| blacklist   | [string] | Which notification types _not_ to send. `[notifications.email.blacklist]` |
 
 ### Website
 The Website currently only has one configuration: `notifications.website.static_dir`.
 This controls the location for the hot-reload attempts (default is "static/" which works with this repo).
+
+### ntfy
+The ntfy configuration accepts a list of different targets. 
+Each target has the same structure as the JSON request (see [ntfy docs](https://docs.ntfy.sh/publish/#publish-as-json); NOTE: actions aren't supported).
+
+In addition to the ntfy json fields are the following fields:
+
+| field     | type     | description                                                                     |
+|-----------|----------|---------------------------------------------------------------------------------|
+| base      | url      | The base url to which to send the notifications to (baseurl of the ntfy server) |
+| whitelist | [string] | see `[email.whitelist]`                                                         |
+| blacklist | [string] | see `[email.blacklist]`                                                         |
 
 ## Rocket
 Rocket is configured the same way that any rocket server would be, via a `Rocket.toml` file.

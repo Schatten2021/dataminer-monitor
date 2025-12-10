@@ -1,4 +1,5 @@
 use state_management::{Notification, NotificationReason, StateHandle};
+use super::Filter;
 
 #[derive(serde::Serialize, serde::Deserialize, Default, Debug)]
 pub struct Config {
@@ -16,6 +17,8 @@ pub struct Config {
     delay: Option<String>,
     email: Option<String>,
     call: Option<String>,
+    #[serde(flatten)]
+    behaviour: Option<Filter>
 }
 #[derive(serde::Serialize)]
 struct NotificationBody {
@@ -65,11 +68,11 @@ impl From<&Config> for NotificationBody {
 }
 
 pub struct NtfyNotificationProvider {
-    config: Config,
+    config: Vec<Config>,
 }
 impl state_management::NotificationProvider for NtfyNotificationProvider {
     const ID: &'static str = "ntfy";
-    type Config = Config;
+    type Config = Vec<Config>;
 
     fn new(_state: StateHandle, config: Self::Config) -> Self {
         log::info!("registering ntfy notification provider");
@@ -87,11 +90,14 @@ impl state_management::NotificationProvider for NtfyNotificationProvider {
             NotificationReason::Seen => "was seen",
             NotificationReason::Other(msg) => &*msg,
         });
-        let mut body = NotificationBody::from(&self.config);
-        body.message = Some(message);
-        log::info!("sending notification to {}", self.config.base);
-        tokio::spawn(reqwest::Client::new().post(&self.config.base)
-            .json(&body)
-            .send());
+        for config in &self.config {
+            if !config.behaviour.clone().unwrap_or_default().allows(&notification.reason) { continue; }
+            let mut body = NotificationBody::from(config);
+            body.message = Some(message.clone());
+            log::info!("sending notification to {}", &config.base);
+            tokio::spawn(reqwest::Client::new().post(&config.base)
+                .json(&body)
+                .send());
+        }
     }
 }
