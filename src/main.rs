@@ -15,6 +15,8 @@ fn init_state() -> Result<state_management::State, ()> {
     state.register_notification_provider::<default_providers::notification_providers::EmailNotificationProvider>()?;
     #[cfg(feature = "frontend-website")]
     state.register_notification_provider::<default_providers::notification_providers::WebsiteNotificationProvider>()?;
+    #[cfg(feature = "ntfy-notifications")]
+    state.register_notification_provider::<default_providers::notification_providers::NtfyNotificationProvider>()?;
     Ok(state)
 }
 

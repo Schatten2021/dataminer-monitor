@@ -16,12 +16,13 @@ api-notification-provider-websockets = ["api-notification-provider", "dep:ws", "
 website-notification-provider = ["dep:rocket", "state-management/rocket-integration", "api-notification-provider"]
 website-notification-provider-hot-reload = ["website-notification-provider"]
 website-notification-provider-include-default-website = ["website-notification-provider"]
+ntfy-notification-provider = ["serde/derive", "dep:reqwest", "dep:url", "url/serde", "reqwest/json"]
 
 # other
 logging = ["dep:log"]
 
 # summaries
-status-provider = ["dataminer-status-provider", "website-status-provider", "minecraft-status-provider"]
+status-provider = ["dataminer-status-provider", "website-status-provider", "minecraft-status-provider", "ntfy-notification-provider"]
 notification-provider = ["email-notification-provider", "api-notification-provider", "website-notification-provider"]
 all-provider = ["status-provider", "notification-provider"]
 
@@ -50,3 +51,5 @@ lettre = { version = "0.11.19", optional = true }
 # website notification provider
 api-types = { path = "../api-types", optional = true }
 ws = { version = "0.1.1", package = "rocket_ws", optional = true}
+# ntfy notification provider
+url = { version = "2.5.7", optional = true }

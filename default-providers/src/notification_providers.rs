@@ -4,6 +4,8 @@ mod email;
 mod website;
 #[cfg(feature = "api-notification-provider")]
 mod api;
+#[cfg(feature = "ntfy-notification-provider")]
+mod ntfy;
 
 #[cfg(feature = "email-notification-provider")]
 pub use email::EmailNotificationProvider;
@@ -11,3 +13,5 @@ pub use email::EmailNotificationProvider;
 pub use website::WebsiteNotificationProvider;
 #[cfg(feature = "api-notification-provider")]
 pub use api::ApiNotificationProvider;
+#[cfg(feature = "ntfy-notification-provider")]
+pub use ntfy::NtfyNotificationProvider;

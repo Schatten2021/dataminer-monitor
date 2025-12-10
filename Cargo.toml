@@ -12,8 +12,9 @@ server-status-source = ["default-providers/website-status-provider"]
 minecraft-server-status-source = ["default-providers/minecraft-status-provider"]
 frontend-website = ["default-providers/website-notification-provider"]
 frontend-websocket = ["default-providers/api-notification-provider-websockets"]
+ntfy-notifications = ["default-providers/ntfy-notification-provider"]
 
-all-notifications = ["e-mail-notifications", "frontend-website", "frontend-websocket"]
+all-notifications = ["e-mail-notifications", "frontend-website", "frontend-websocket", "ntfy-notifications"]
 all-data-sources = ["dataminer-status-source", "server-status-source", "minecraft-server-status-source"]
 
 default = ["state-management/default", "all-notifications", "all-data-sources", "default-providers/logging", "default-providers/website-notification-provider-hot-reload"]

@@ -298,6 +298,7 @@ dependencies = [
  "serde",
  "state-management",
  "tokio",
+ "url",
 ]
 
 [[package]]
