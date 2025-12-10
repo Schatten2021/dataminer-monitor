@@ -144,11 +144,12 @@ Each target has the same structure as the JSON request (see [ntfy docs](https://
 
 In addition to the ntfy json fields are the following fields:
 
-| field     | type     | description                                                                     |
-|-----------|----------|---------------------------------------------------------------------------------|
-| base      | url      | The base url to which to send the notifications to (baseurl of the ntfy server) |
-| whitelist | [string] | see `[email.whitelist]`                                                         |
-| blacklist | [string] | see `[email.blacklist]`                                                         |
+| field      | type     | description                                                                        |
+|------------|----------|------------------------------------------------------------------------------------|
+| base       | url      | The base url to which to send the notifications to (baseurl of the ntfy server)    |
+| whitelist  | [string] | see `[email.whitelist]`                                                            |
+| blacklist  | [string] | see `[email.blacklist]`                                                            |
+| auth_token | string   | the authentication  (see [ntfy docs](https://docs.ntfy.sh/publish/#access-tokens)) |
 
 ## Rocket
 Rocket is configured the same way that any rocket server would be, via a `Rocket.toml` file.

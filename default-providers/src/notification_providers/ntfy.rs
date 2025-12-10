@@ -18,7 +18,8 @@ pub struct Config {
     email: Option<String>,
     call: Option<String>,
     #[serde(flatten)]
-    behaviour: Option<Filter>
+    behaviour: Option<Filter>,
+    auth_token: Option<String>,
 }
 #[derive(serde::Serialize)]
 struct NotificationBody {
@@ -90,14 +91,18 @@ impl state_management::NotificationProvider for NtfyNotificationProvider {
             NotificationReason::Seen => "was seen",
             NotificationReason::Other(msg) => &*msg,
         });
+        let mut client = reqwest::Client::new();
         for config in &self.config {
             if !config.behaviour.clone().unwrap_or_default().allows(&notification.reason) { continue; }
             let mut body = NotificationBody::from(config);
             body.message = Some(message.clone());
             log::info!("sending notification to {}", &config.base);
-            tokio::spawn(reqwest::Client::new().post(&config.base)
-                .json(&body)
-                .send());
+            let mut request = client.post(&config.base)
+                .json(&body);
+            if let Some(token) = &config.auth_token {
+                request = request.bearer_auth(token);
+            }
+            tokio::spawn(request.send());
         }
     }
 }
