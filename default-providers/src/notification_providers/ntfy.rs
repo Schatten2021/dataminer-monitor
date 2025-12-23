@@ -76,7 +76,6 @@ impl state_management::NotificationProvider for NtfyNotificationProvider {
     type Config = Vec<Config>;
 
     fn new(_state: StateHandle, config: Self::Config) -> Self {
-        log::info!("registering ntfy notification provider");
         Self { config, }
     }
 
@@ -84,19 +83,19 @@ impl state_management::NotificationProvider for NtfyNotificationProvider {
         self.config = config;
     }
 
-    fn send(&self, _source_id: String, notification: Notification) {
+    fn send(&self, source_id: String, notification: Notification) {
         let message = format!("{} {}", notification.item_name, match &notification.reason {
             NotificationReason::WentOnline => "went online",
             NotificationReason::WentOffline => "went offline",
             NotificationReason::Seen => "was seen",
             NotificationReason::Other(msg) => &*msg,
         });
-        let mut client = reqwest::Client::new();
+        let client = reqwest::Client::new();
         for config in &self.config {
-            if !config.behaviour.clone().unwrap_or_default().allows(&notification.reason) { continue; }
+            if !config.behaviour.clone().unwrap_or_default()
+                .allows(&source_id, &notification) { continue; }
             let mut body = NotificationBody::from(config);
             body.message = Some(message.clone());
-            log::info!("sending notification to {}", &config.base);
             let mut request = client.post(&config.base)
                 .json(&body);
             if let Some(token) = &config.auth_token {

@@ -10,11 +10,13 @@ There are two basic "providers": `StatusProvider` & `NotificationProvider`.
 
 These share the task of detecting when a server/service is down (`StatusProvider`) & sending out notifications about the outage (`NotificationProvider`).
 
-There are currently 2 `StatusProvider` and 2 `NotificationProvider`:
+There are currently 3 `StatusProvider` and 2 `NotificationProvider`:
 - `miner` (`StatusProvider`, receives pings, made for dataminer)
 - `webserver` (`StatusProvider`, sends pings, **only compatible with HTTP servers that support GET**)
+- `minecraft` (`StatusProvider`, sends pings)
 - `email` (`NotificationProvider`, sends out E-Mails when a service goes on-/offline)
 - `webserver` (`NotificationProvider`, provides the front-end for the server)
+- `ntfy` (`NotificationProvider`, uses the [ntfy](https://ntfy.sh) to send out push notifications)
 
 Note: `miners` are only able to expose routes that are part of their specific subroute (e.g. `/miner` for the Dataminer builtin).
 **This means that to ping the dataminer one must request `/miner/ping?id={id}`**
@@ -32,13 +34,15 @@ These can be activated/deactivated via `--no-default-features --features <foo,ba
 
 The feature flags are the following:
 
-| flag                       | what does it toggle?                                                  |
-|----------------------------|-----------------------------------------------------------------------|
-| `e-mail-notifications`     | the support sending E-Mails                                           |
-| `frontend-website`         | The web frontend                                                      |
-| `frontend-websocket`       | The websocket (for live updates; no this isn't in `frontent-website`) |
-| `data-miner-status-source` | Whether dataminers as a status source are supported                   |
-| `server-status-source`     | The website monitoring                                                |
+| flag                             | what does it toggle?                                                  |
+|----------------------------------|-----------------------------------------------------------------------|
+| `e-mail-notifications`           | the support sending E-Mails                                           |
+| `frontend-website`               | The web frontend                                                      |
+| `frontend-websocket`             | The websocket (for live updates; no this isn't in `frontent-website`) |
+| `ntfy-notifications`             | The NTFY client able to send out push notifications                   |
+| `data-miner-status-source`       | Whether dataminers as a status source are supported                   |
+| `server-status-source`           | The website monitoring                                                |
+| `minecraft-server-status-source` | Support for pinging minecraft servers                                 |
 
 Then there are the `all-notifications` & `all-data-sources` flags which I think are pretty self-explanatory.
 
@@ -112,27 +116,55 @@ name = "Example minecraft server"
 ```
 
 ## `NotificationProvider`
+### General
+#### Whitelist/Blacklist
+Some `NotificationProvider` support whitelists/blacklists, following a common configuration pattern.
+
+Each of them have the same keys, "whitelist" and "blacklist" each being mutually exclusive.
+The keys are the following:
+- "reason" (`whitelist-reasons`/`blacklist-reasons`, previously (and deprecated) `whitelist`/`blacklist`): 
+  - The reason for a sent notification (`Seen`, `WentOnline`, `WentOffline`, `Custom`)
+  - can/should be used to disable "categories" of notifications.
+  - Defaults to blacklisting `Seen`.
+- "id" (`whitelist-ids`/`blacklist-ids`): 
+  - The id of the element that sent the notification (usually same key as in configuration).
+  - This can be used to finely toggle certain status elements for certain notifications
+    - i.e. send all `WentOnline`/`WentOffline` status notifications of one server to a separate ntfy server.
+- "type" (`whitelist-types`/`blacklist-types`): 
+  - The type of the `StatusProvider` that sent out the notification.
+  - This can be used to toggle certain `StatusProvider`s.
+  - Mainly meant to be used in combination with "id"
+    - i.e. to specifically send notifications of one element to one channel
+
+Note: `NotificationProvider` that support whitelisting/blacklisting usually use `serde(flatten)`, so that the fields of the whitelist/blacklist are direct fields on the config. Example:
+```toml
+[notifications.email]
+address = "noreply@example.com"
+password = "123456789"
+server = "example.com"
+blacklisted-ids = ["foo"]
+whitelisted-types = ["webserver"]
+blacklisted-reasons = ["seen", "custom"]
+```
+Also Note: The keys have _multiple_ aliases (i.e. `deny-types`, `blacklisted-types`, etc.) which still map to the same field.
+
 ### E-Mail
 E-Mail notifications are configurable under `notifications.email`.
 
-They have the following fields:
+They have the following fields (supports [Whitelist/Blacklist](#whitelistblacklist)):
 
 | field       | type                    | description                                                                                                                                 | 
 |-------------|-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
 | address     | string                  | The E-Mail address to be used when sending E-Mails (Note: Must be the same as when logging in into the E-Mail-Server                        |
 | password    | string                  | The E-Mail password for the account (yes this is currently plaintext)                                                                       | 
 | server      | string                  | The Address of the E-Mail-Server that is connected to (this is currently not read from the E-Mail)                                          |
-| whitelist   | [string, ...] optional  | Notification types to send (Custom, Seen, WentOnline or WentOffline). Any other types will not be sent. Mutually exclusive with `blacklist` |
-| blacklist   | [string, ...] optional  | Notification types _not_ to send. Opposite of and mutually exclusive with `whitelist`. Any other types _will_ be sent.                      |
 | subscribers | [string or custom, ...] | A list of the E-Mail-Addresses that are to be notified of changes                                                                           |
 
-A "custom" subscriber has the following fields:
+A "custom" subscriber has the following fields (also supports [Whitelist/Blacklist](#whitelistblacklist):
 
 | field       | type     | description                                                               |
 |-------------|----------|---------------------------------------------------------------------------|
 | email       | string   | The E-Mail-Address that a notification will be sent to                    |
-| whitelist   | [string] | Which notifications to send. See `[notifications.email.whitelist]`        |
-| blacklist   | [string] | Which notification types _not_ to send. `[notifications.email.blacklist]` |
 
 ### Website
 The Website currently only has one configuration: `notifications.website.static_dir`.
@@ -142,13 +174,11 @@ This controls the location for the hot-reload attempts (default is "static/" whi
 The ntfy configuration accepts a list of different targets. 
 Each target has the same structure as the JSON request (see [ntfy docs](https://docs.ntfy.sh/publish/#publish-as-json); NOTE: actions aren't supported).
 
-In addition to the ntfy json fields are the following fields:
+In addition to the ntfy json fields and the [Whitelist/Blacklist](#whitelistblacklist) fields are the following fields:
 
 | field      | type     | description                                                                        |
 |------------|----------|------------------------------------------------------------------------------------|
 | base       | url      | The base url to which to send the notifications to (baseurl of the ntfy server)    |
-| whitelist  | [string] | see `[email.whitelist]`                                                            |
-| blacklist  | [string] | see `[email.blacklist]`                                                            |
 | auth_token | string   | the authentication  (see [ntfy docs](https://docs.ntfy.sh/publish/#access-tokens)) |
 
 ## Rocket

@@ -47,9 +47,9 @@ impl Subscriber {
             Subscriber::Custom { email, .. } => email,
         }
     }
-    fn allows(&self, reason: &state_management::NotificationReason) -> bool {
+    fn allows(&self, source_id: &String, notification: &state_management::Notification) -> bool {
         match self {
-            Subscriber::Custom { behaviour, .. } => behaviour.allows(reason),
+            Subscriber::Custom { behaviour, .. } => behaviour.allows(source_id, notification),
             _ => true,
         }
     }
@@ -75,7 +75,8 @@ impl state_management::NotificationProvider for EmailNotificationProvider {
         self.config = config;
     }
     fn send(&self, source_id: String, notification: state_management::Notification) {
-        if !self.config.behaviour.clone().unwrap_or_default().allows(&notification.reason) { return; }
+        if !self.config.behaviour.clone().unwrap_or_default()
+            .allows(&source_id, &notification) { return; }
         let cloned = self.clone();
         std::thread::spawn(move || {
             if let Err(e) = cloned.send_message(
@@ -90,7 +91,8 @@ impl state_management::NotificationProvider for EmailNotificationProvider {
                     state_management::NotificationReason::Seen => "Probably Ok",
                     state_management::NotificationReason::Other(v) => v,
                 }),
-                notification.reason.clone()
+                source_id,
+                notification.clone()
             ) {
                 #[cfg(feature = "logging")]
                 log::error!("Failed to send notification for {} because: {:?}", notification.reason, e);
@@ -99,7 +101,11 @@ impl state_management::NotificationProvider for EmailNotificationProvider {
     }
 }
 impl EmailNotificationProvider {
-    fn send_message(self, subject: String, body: impl lettre::message::IntoBody + Clone, reason: state_management::NotificationReason) -> Result<(), Box<dyn std::error::Error>> {
+    fn send_message(self,
+                    subject: String,
+                    body: impl lettre::message::IntoBody + Clone,
+                    source_type_id: String,
+                    notification: state_management::Notification) -> Result<(), Box<dyn std::error::Error>> {
         use lettre::Transport;
         let mailer = lettre::transport::smtp::SmtpTransport::relay(&self.config.server)?
             .credentials(self.credentials)
@@ -109,7 +115,7 @@ impl EmailNotificationProvider {
             .subject(subject)
             .header(lettre::message::header::ContentType::TEXT_HTML);
         for target in self.config.subscribers {
-            if !target.allows(&reason) { continue; }
+            if !target.allows(&source_type_id, &notification) { continue; }
             mailer.send(&builder_preset.clone()
                 .to(target.get_email().parse()?)
                 .body(body.clone())?)?;
