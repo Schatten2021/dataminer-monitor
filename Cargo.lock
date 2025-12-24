@@ -329,6 +329,7 @@ dependencies = [
  "rocket_ws",
  "serde",
  "state-management",
+ "strfmt",
  "tokio",
  "url",
 ]
@@ -2113,6 +2114,12 @@ dependencies = [
  "serde",
  "toml 0.9.8",
 ]
+
+[[package]]
+name = "strfmt"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29fdc163db75f7b5ffa3daf0c5a7136fb0d4b2f35523cd1769da05e034159feb"
 
 [[package]]
 name = "subtle"

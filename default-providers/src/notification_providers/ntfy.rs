@@ -1,11 +1,18 @@
-use state_management::{Notification, NotificationReason, StateHandle};
 use super::Filter;
+use state_management::{Notification, StateHandle};
+use std::collections::HashMap;
+
+fn default_message() -> String {
+    "{source_name} {reason}".to_string()
+}
 
 #[derive(serde::Serialize, serde::Deserialize, Default, Debug)]
 pub struct Config {
     base: String,
     topic: String,
     title: Option<String>,
+    #[serde(default="default_message")]
+    message: String,
     #[serde(default)]
     tags: Vec<String>,
     priority: Option<u8>,
@@ -84,18 +91,26 @@ impl state_management::NotificationProvider for NtfyNotificationProvider {
     }
 
     fn send(&self, source_id: String, notification: Notification) {
-        let message = format!("{} {}", notification.item_name, match &notification.reason {
-            NotificationReason::WentOnline => "went online",
-            NotificationReason::WentOffline => "went offline",
-            NotificationReason::Seen => "was seen",
-            NotificationReason::Other(msg) => &*msg,
-        });
+        let format_values = HashMap::from([
+            ("type_id", source_id.clone()),
+            ("reason", notification.reason.to_string()),
+            ("source_id", notification.item_id.clone()),
+            ("source_name", notification.item_name.clone()),
+        ]);
         let client = reqwest::Client::new();
         for config in &self.config {
+            use strfmt::Format;
             if !config.behaviour.clone().unwrap_or_default()
                 .allows(&source_id, &notification) { continue; }
+            let title = config.title.as_ref().map(|t| {
+                t.format(&format_values).unwrap_or_else(|_| t.clone())
+            });
+            let message = config.message.format(&format_values).unwrap_or_else(|_| config.message.clone());
+
+
             let mut body = NotificationBody::from(config);
             body.message = Some(message.clone());
+            body.title = title;
             let mut request = client.post(&config.base)
                 .json(&body);
             if let Some(token) = &config.auth_token {

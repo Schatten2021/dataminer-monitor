@@ -16,7 +16,7 @@ api-notification-provider-websockets = ["api-notification-provider", "dep:ws", "
 website-notification-provider = ["dep:rocket", "state-management/rocket-integration", "api-notification-provider"]
 website-notification-provider-hot-reload = ["website-notification-provider"]
 website-notification-provider-include-default-website = ["website-notification-provider"]
-ntfy-notification-provider = ["serde/derive", "dep:reqwest", "dep:url", "url/serde", "reqwest/json"]
+ntfy-notification-provider = ["serde/derive", "dep:reqwest", "dep:url", "url/serde", "reqwest/json", "dep:strfmt"]
 
 # other
 logging = ["dep:log"]
@@ -53,3 +53,4 @@ api-types = { path = "../api-types", optional = true }
 ws = { version = "0.1.1", package = "rocket_ws", optional = true}
 # ntfy notification provider
 url = { version = "2.5.7", optional = true }
+strfmt = { version = "0.2.5", optional = true }

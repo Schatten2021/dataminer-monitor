@@ -181,6 +181,17 @@ In addition to the ntfy json fields and the [Whitelist/Blacklist](#whitelistblac
 | base       | url      | The base url to which to send the notifications to (baseurl of the ntfy server)    |
 | auth_token | string   | the authentication  (see [ntfy docs](https://docs.ntfy.sh/publish/#access-tokens)) |
 
+Note: The `title` and `message` fields are formatted strings, so you can write something like:
+```toml
+title = "{source_name} {reason} just now."
+message = "{source_name} (id: {source_id}; type: {type_id}) just {reason}"
+```
+Possible format elements are:
+- `source_name`: Human readable name of the source
+- `source_id`: The internal unique identifier of the source
+- `reason`: The reason for the notification
+- `type_id`: The id of the requesting type
+
 ## Rocket
 Rocket is configured the same way that any rocket server would be, via a `Rocket.toml` file.
 For more details please consult the [rocket documentation](https://rocket.rs/guide/master/configuration/).
