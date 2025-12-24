@@ -92,10 +92,10 @@ impl state_management::NotificationProvider for NtfyNotificationProvider {
 
     fn send(&self, source_id: String, notification: Notification) {
         let format_values = HashMap::from([
-            ("type_id", source_id.clone()),
-            ("reason", notification.reason.to_string()),
-            ("source_id", notification.item_id.clone()),
-            ("source_name", notification.item_name.clone()),
+            ("type_id".to_string(), source_id.clone()),
+            ("reason".to_string(), notification.reason.to_string()),
+            ("source_id".to_string(), notification.item_id.clone()),
+            ("source_name".to_string(), notification.item_name.clone()),
         ]);
         let client = reqwest::Client::new();
         for config in &self.config {
