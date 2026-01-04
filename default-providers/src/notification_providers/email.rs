@@ -1,5 +1,12 @@
 use super::Filter;
 
+macro_rules! trace {
+    ($msg:literal $(,$args:expr)*) => {crate::trace!(notification "email": $msg $(,$args)*)};
+}
+macro_rules! error {
+    ($msg:literal $(,$args:expr)*) => {crate::error!(notification "email": $msg $(,$args)*)};
+}
+
 fn default_name() -> String { "No Reply".to_string() }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq, Debug)]
@@ -15,8 +22,7 @@ pub struct Config {
 }
 impl Default for Config {
     fn default() -> Self {
-        #[cfg(feature = "logging")]
-        log::error!("No information provided for EmailNotificationProvider. Please add the required config to the config file.");
+        error!("No information provided for EmailNotificationProvider. Please add the required config to the config file.");
         Self {
             address: Default::default(),
             password: Default::default(),
@@ -65,12 +71,14 @@ impl state_management::NotificationProvider for EmailNotificationProvider {
     type Config = Config;
 
     fn new(_state: state_management::StateHandle, config: Self::Config) -> Self {
+        trace!("creating new EmailNotificationProvider");
         Self {
             credentials: lettre::transport::smtp::authentication::Credentials::new(config.address.clone(), config.password.clone()),
             config,
         }
     }
     fn update_config(&mut self, config: Self::Config) {
+        trace!("updating config for EmailNotificationProvider");
         self.credentials = lettre::transport::smtp::authentication::Credentials::new(config.address.clone(), config.password.clone());
         self.config = config;
     }
@@ -94,8 +102,7 @@ impl state_management::NotificationProvider for EmailNotificationProvider {
                 source_id,
                 notification.clone()
             ) {
-                #[cfg(feature = "logging")]
-                log::error!("Failed to send notification for {} because: {:?}", notification.reason, e);
+                error!("Failed to send notification for {} because: {:?}", notification.reason, e);
             }
         });
     }
@@ -103,10 +110,11 @@ impl state_management::NotificationProvider for EmailNotificationProvider {
 impl EmailNotificationProvider {
     fn send_message(self,
                     subject: String,
-                    body: impl lettre::message::IntoBody + Clone,
+                    body: String,
                     source_type_id: String,
                     notification: state_management::Notification) -> Result<(), Box<dyn std::error::Error>> {
         use lettre::Transport;
+        trace!("sending email: {:?}", body);
         let mailer = lettre::transport::smtp::SmtpTransport::relay(&self.config.server)?
             .credentials(self.credentials)
             .build();
@@ -116,6 +124,7 @@ impl EmailNotificationProvider {
             .header(lettre::message::header::ContentType::TEXT_HTML);
         for target in self.config.subscribers {
             if !target.allows(&source_type_id, &notification) { continue; }
+            trace!("sending email to {}", target.get_email());
             mailer.send(&builder_preset.clone()
                 .to(target.get_email().parse()?)
                 .body(body.clone())?)?;

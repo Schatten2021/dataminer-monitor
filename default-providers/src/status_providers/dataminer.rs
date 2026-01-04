@@ -6,6 +6,12 @@ use rocket::http::uri::fmt::Path;
 use rocket::http::uri::Segments;
 use rocket::{Data, Request};
 use rocket::route::Outcome;
+macro_rules! debug {
+    ($msg:literal $(,$args:expr)*) => {crate::debug!(status "dataminer": $msg $(,$args)*)};
+}
+macro_rules! trace {
+    ($msg:literal $(,$args:expr)*) => {crate::trace!(status "dataminer": $msg $(,$args)*)};
+}
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Config {
@@ -38,8 +44,7 @@ impl state_management::StatusProvider for DataminerStatusProvider {
         self.config = config;
     }
     fn current_stati(&self) -> HashMap<String, Status> {
-        #[cfg(feature = "logging")]
-        log::debug!("gathering current stati from DataminerStatusProvider");
+        debug!("gathering current stati from DataminerStatusProvider");
         // Note: the stati have to be combined from 2 different sources:
         // - all who have pinged already (from self.current_stati)
         // - all who have been manually configured (from self.config)
@@ -61,8 +66,7 @@ impl state_management::StatusProvider for DataminerStatusProvider {
                 last_seen: Some(status.last_seen.to_utc()),
             });
         }
-        #[cfg(feature = "logging")]
-        log::trace!("found {} dataminers that have pinged already", result.len());
+        trace!("found {} dataminers that have pinged already", result.len());
         for (id, status) in self.config.iter() {
             // deduplicate entries. Some may already have been in `self.current_stati`
             if result.contains_key(id) { continue }
@@ -72,8 +76,7 @@ impl state_management::StatusProvider for DataminerStatusProvider {
                 last_seen: None,
             });
         }
-        #[cfg(feature = "logging")]
-        log::trace!("found {} dataminers in total", result.len());
+        trace!("found {} dataminers in total", result.len());
         result
     }
     fn handle_rocket_http_request<'r, 'l>(&self, mut path: Segments<Path>, request: &'r Request<'l>, data: Data<'r>) -> Outcome<'r> {
@@ -89,8 +92,7 @@ impl state_management::StatusProvider for DataminerStatusProvider {
             Some(config) => config.name.as_ref().unwrap_or(&id).clone(),
             None => id.clone()
         };
-        #[cfg(feature = "logging")]
-        log::trace!("received ping from dataminer {name}");
+        trace!("received ping from dataminer {}", name);
         macro_rules! send_notification {
             ($reason:ident) => {
                 self.state_handle.send_notification(::state_management::Notification {
@@ -102,8 +104,7 @@ impl state_management::StatusProvider for DataminerStatusProvider {
         }
         send_notification!(Seen);
         if !self.current_stati.read().contains_key(&id) {
-            #[cfg(feature = "logging")]
-            log::debug!("dataminer {name} pinged for the first time");
+            debug!("dataminer {} pinged for the first time", name);
             self.current_stati.write().insert(id.clone(), Arc::new(RwLock::new(MinerStatus {
                 last_seen: chrono::Local::now(),
                 marked_offline: false,
@@ -119,8 +120,6 @@ impl state_management::StatusProvider for DataminerStatusProvider {
         drop(lock);
         // Note that because new miners are inserted with `marked_offline: false`, this does not run the risk of sending the WentOnline message twice.
         if went_online {
-            #[cfg(feature = "logging")]
-            log::info!("dataminer {name} went back online");
             send_notification!(WentOnline);
         }
         if let Some(config) = self.config.get(&id) {
@@ -132,8 +131,6 @@ impl state_management::StatusProvider for DataminerStatusProvider {
                     rocket::tokio::time::sleep(timeout).await;
                     if status.read().last_seen == timestamp {
                         status.write().marked_offline = true;
-                        #[cfg(feature = "logging")]
-                        log::info!("dataminer {name} went offline");
                         handle.send_notification(Notification {
                             item_name: name,
                             item_id: id,

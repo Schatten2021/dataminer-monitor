@@ -3,6 +3,14 @@ fn default_static_dir() -> std::path::PathBuf { std::path::PathBuf::from("static
 #[cfg(not(any(feature = "website-notification-provider-hot-reload", feature = "website-notification-provider-include-default-website")))]
 compile_error!("requires a source of content to serve: either the default website (`website-notification-provider-include-default-website`) or a hot-reload website (`website-notification-provider-hot-reload`)");
 
+macro_rules! debug {
+    ($msg:literal $(,$args:expr)*) => {crate::debug!(notification "website": $msg $(,$args)*)};
+}
+macro_rules! trace {
+    ($msg:literal $(,$args:expr)*) => {crate::trace!(notification "website": $msg $(,$args)*)};
+}
+
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Config {
     #[serde(default = "default_static_dir")]
@@ -23,21 +31,25 @@ impl state_management::NotificationProvider for WebsiteNotificationProvider {
     const ID: &'static str = "website";
     type Config = Config;
     fn new(state_handle: state_management::StateHandle, config: Self::Config) -> Self {
+        trace!("Creating WebsiteNotificationProvider");
         state_handle.add_dependency_notification_provider::<crate::notification_providers::ApiNotificationProvider>();
         Self {
             config,
         }
     }
     fn update_config(&mut self, config: Self::Config) {
+        trace!("Updating config for WebsiteNotificationProvider");
         self.config = config;
     }
     #[allow(unused_variables)]
     fn send(&self, source_id: String, notification: state_management::Notification) {}
     fn handle_rocket_http_request<'r, 'l>(&self, path: rocket::http::uri::Segments<rocket::http::uri::fmt::Path>, request: &'r rocket::Request<'l>, data: rocket::Data<'r>) -> rocket::route::Outcome<'r> {
         use rocket::response::Responder;
+        let path = &*path.collect::<Vec<_>>().join("/");
         macro_rules! respond_with {
             ($what:ident($val:expr)) => {
                 {
+                    debug!("Handling request to {}", path);
                     match rocket::response::content::$what($val).respond_to(request) {
                         Ok(response) => rocket::route::Outcome::Success(response),
                         Err(e) => rocket::route::Outcome::Error(e),
@@ -65,7 +77,6 @@ impl state_management::NotificationProvider for WebsiteNotificationProvider {
                 }
             };
         }
-        let path = &*path.collect::<Vec<_>>().join("/");
         match path {
             "" | "index.html" | "static/index.html" => respond_with!(RawHtml(include_static!(String "../../../static/index.html" | "index.html"))),
             "static/style.css" => respond_with!(RawCss(include_static!(String "../../../static/style.css" | "style.css"))),

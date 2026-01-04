@@ -3,6 +3,18 @@ mod notifications;
 mod state;
 mod state_handle;
 
+macro_rules! trace {
+    ($msg:literal $(, $args:expr)*) => {if cfg!(feature = "logging") {::log::trace!($msg $(,$args)*)}};
+}
+macro_rules! debug {
+    ($msg:literal $(, $args:expr)*) => {if cfg!(feature = "logging") {::log::debug!($msg $(,$args)*)}};
+}
+macro_rules! info {
+    ($msg:literal $(, $args:expr)*) => {if cfg!(feature = "logging") {::log::info!($msg $(,$args)*)}};
+}
+pub(crate) use {trace, debug, info};
+
+
 pub use traits::*;
 pub use notifications::{Notification, NotificationReason};
 pub use state_handle::StateHandle;

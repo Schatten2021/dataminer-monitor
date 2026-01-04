@@ -1,5 +1,17 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use state_management::Status;
+
+macro_rules! debug {
+    ($msg:literal $(,$args:expr)*) => {crate::debug!(status "website": $msg $(,$args)*)};
+}
+macro_rules! trace {
+    ($msg:literal $(,$args:expr)*) => {crate::trace!(status "website": $msg $(,$args)*)};
+}
+macro_rules! info {
+    ($msg:literal $(,$args:expr)*) => {crate::info!(status "website": $msg $(,$args)*)};
+}
 
 const fn hourly() -> chrono::Duration { chrono::Duration::hours(1) }
 
@@ -64,34 +76,35 @@ impl state_management::StatusProvider for ServerStatusProvider {
         }
     }
     fn update_config(&mut self, config: Self::Config) {
-        for id in self.config.keys().cloned().collect::<Vec<_>>() {
+        for id in self.config.keys()
+            .filter(|k| !self.config.contains_key(*k))
+            .cloned()
+            .collect::<Vec<_>>() {
             let id = &id;
-            if !config.contains_key(id) {
-                self.config.remove(id);
-                self.states.remove(id);
-                self.task_handles.remove(id).map(|h| h.abort());
-            }
+            info!("removing ping task for {}", id);
+            self.config.remove(id);
+            self.states.remove(id);
+            self.task_handles.remove(id).map(|h| h.abort());
         }
-        for (id, new_config) in config.iter() {
-            match self.config.get_mut(id) {
-                Some(old_config) => {
-                    if old_config == new_config { continue; }
-                    self.config.insert(id.clone(), new_config.clone());
-                    let status = self.states[id].clone();
-                    self.task_handles.insert(id.clone(), spawn_listen_task(id.clone(), new_config.clone(), status, self.state_handle.clone()))
-                        .map(|h| h.abort());
-                },
-                None => {
-                    let status = std::sync::Arc::new(parking_lot::RwLock::new(ServerState { last_seen: None, is_online: false, }));
-                    let mut ticker = tokio::time::interval(new_config.interval.to_std().unwrap_or_else(|_| core::time::Duration::new(3600, 0)));
-                    ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-                    self.config.insert(id.clone(), new_config.clone());
-                    self.states.insert(id.clone(), status.clone());
-                    self.task_handles.insert(id.clone(), spawn_listen_task(id.clone(), new_config.clone(), status, self.state_handle.clone()));
+        for (id, new_config) in config.into_iter()
+            .filter(|(id, new_conf)| self.config.get(id).map(|old_conf| old_conf != new_conf).unwrap_or(true))
+            .collect::<Vec<_>>() {
+            self.config.insert(id.clone(), new_config.clone());
+            match (self.task_handles.get_mut(&id), self.states.get(&id).cloned()) {
+                (Some(handle), Some(state)) => {
+                    info!("restarting ping task for {}", id);
+                    handle.abort();
+                    *handle = spawn_listen_task(id, new_config, state, self.state_handle.clone());
                 }
+                (None, None) => {
+                    info!("starting ping task for {}", id);
+                    let status = Arc::new(RwLock::new(ServerState { last_seen: None, is_online: false }));
+                    self.states.insert(id.clone(), status.clone());
+                    self.task_handles.insert(id.clone(), spawn_listen_task(id, new_config, status, self.state_handle.clone()));
+                }
+                (Some(_), None) | (None, Some(_)) => unreachable!("There should not be a task handle with no state and no state without a task handle!"),
             }
         }
-        self.config = config;
     }
     fn current_stati(&self) -> HashMap<String, Status> {
         self.states.iter()
@@ -107,6 +120,7 @@ fn spawn_listen_task(id: String, config: Config, status: std::sync::Arc<parking_
     let mut ticker = tokio::time::interval(config.interval.to_std().unwrap_or_else(|_| {core::time::Duration::new(3600,0)}));
     ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     let name = config.name.clone().unwrap_or_else(|| id.clone());
+    debug!("spawning ping task for {}", name);
     macro_rules! send_notification {
         ($reason:ident($id:ident)) => {
             state_handle.send_notification(::state_management::Notification {
@@ -120,8 +134,7 @@ fn spawn_listen_task(id: String, config: Config, status: std::sync::Arc<parking_
         loop {
             ticker.tick().await;
             match (async || {
-                #[cfg(feature = "logging")]
-                log::trace!("testing status of webserver {name} by pinging {}", config.url);
+                trace!("testing status of webserver {} by pinging {}", name, config.url);
                 let response = reqwest::get(&config.url).await.map_err(drop)?;
                 let status = response.status().as_u16();
                 if config.accepted_stati.contains(&status) {
@@ -138,8 +151,6 @@ fn spawn_listen_task(id: String, config: Config, status: std::sync::Arc<parking_
                     if !lock.is_online {
                         lock.is_online = true;
                         drop(lock);
-                        #[cfg(feature = "logging")]
-                        log::info!("webserver {name} went online");
                         send_notification!(WentOnline(id));
                     }
                     send_notification!(Seen(id));
@@ -147,8 +158,6 @@ fn spawn_listen_task(id: String, config: Config, status: std::sync::Arc<parking_
                 Err(()) => {
                     if status.read().is_online {
                         status.write().is_online = false;
-                        #[cfg(feature = "logging")]
-                        log::info!("webserver {name} went offline");
                         send_notification!(WentOffline(id));
                     }
                 }
@@ -156,7 +165,7 @@ fn spawn_listen_task(id: String, config: Config, status: std::sync::Arc<parking_
         }
     })
 }
-impl core::ops::Drop for ServerStatusProvider {
+impl Drop for ServerStatusProvider {
     fn drop(&mut self) {
         for handle in self.task_handles.values() {
             handle.abort();

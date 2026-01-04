@@ -1,6 +1,14 @@
 use rocket::response::Responder;
 use state_management::{Notification, StateHandle};
 
+macro_rules! trace {
+    ($msg:literal $(,$args:expr)*) => {crate::trace!(notification "api": $msg $(,$args)*)};
+}
+macro_rules! error {
+    ($msg:literal $(,$args:expr)*) => {crate::error!(notification "api": $msg $(,$args)*)};
+}
+
+
 mod websockets;
 
 fn default_route() -> String { "api/".to_string() }
@@ -17,7 +25,7 @@ impl Default for Config {
 
 pub struct ApiNotificationProvider {
     config: Config,
-    state_handle: state_management::StateHandle,
+    state_handle: StateHandle,
     websockets: std::sync::Arc<parking_lot::RwLock<std::collections::HashSet<websockets::WebSocketRef>>>,
 }
 impl state_management::NotificationProvider for ApiNotificationProvider {
@@ -25,6 +33,7 @@ impl state_management::NotificationProvider for ApiNotificationProvider {
     type Config = Config;
 
     fn new(state: StateHandle, config: Self::Config) -> Self {
+        trace!("creating new ApiNotificationProvider");
         Self {
             state_handle: state,
             config,
@@ -33,30 +42,32 @@ impl state_management::NotificationProvider for ApiNotificationProvider {
     }
 
     fn update_config(&mut self, config: Self::Config) {
+        trace!("Updating config for ApiNotificationProvider");
         self.config = config;
     }
 
     fn send(&self, source_id: String, notification: Notification) {
         #[cfg(feature = "api-notification-provider-websockets")]
         {
+            use state_management::NotificationReason;
+            use api_types::{WebSocketMessage, StatusUpdate};
             let message = match notification.reason {
-                ::state_management::NotificationReason::Seen => ::api_types::WebSocketMessage::MinerPing { type_id: source_id, id: notification.item_id },
-                ::state_management::NotificationReason::WentOnline | ::state_management::NotificationReason::WentOffline => ::api_types::WebSocketMessage::MinerStatusChange(::api_types::StatusUpdate {
+                NotificationReason::Seen => WebSocketMessage::Ping { type_id: source_id, id: notification.item_id },
+                NotificationReason::WentOnline | NotificationReason::WentOffline => WebSocketMessage::MinerStatusChange(StatusUpdate {
                     type_id: source_id,
                     id: notification.item_id,
-                    new_status: notification.reason == ::state_management::NotificationReason::WentOnline,
+                    new_status: notification.reason == NotificationReason::WentOnline,
                 }),
-                ::state_management::NotificationReason::Other(msg) => {
-                    #[cfg(feature = "logging")]
-                    log::debug!("{msg} is not implemented");
+                NotificationReason::Other(msg) => {
+                    crate::debug!(notification "api/websockets": "sending custom messages (like \"{}\") is not implemented for websockets", msg);
                     return;
                 },
             };
+            trace!("Sending message {:?} to websockets", message);
             let message = match rocket::serde::json::to_string(&message) {
                 Ok(text) => text,
                 Err(e) => {
-                    #[cfg(feature = "logging")]
-                    log::error!("unable to serialize message for sending: {e}");
+                    crate::error!(notification "api/websockets": "unable to serialize message for sending: {}", e);
                     return;
                 }
             };
@@ -67,8 +78,7 @@ impl state_management::NotificationProvider for ApiNotificationProvider {
 
                 tokio::spawn(async move {
                     if let Err(e) = socket.send(message).await {
-                        #[cfg(feature = "logging")]
-                        log::debug!("error sending message to websocket: {e}");
+                        crate::debug!(notification "api/websockets": "error sending message to websocket: {}", e);
                         sockets.write().remove(&socket);
                     }
                 });
@@ -100,8 +110,7 @@ impl state_management::NotificationProvider for ApiNotificationProvider {
                 match response.respond_to(request) {
                     Ok(response) => rocket::route::Outcome::Success(response),
                     Err(e) => {
-                        #[cfg(feature = "logging")]
-                        log::error!("error responding: {e}");
+                        error!("error responding: {}", e);
                         rocket::route::Outcome::Error(rocket::http::Status::InternalServerError)
                     }
                 }
@@ -131,8 +140,7 @@ impl state_management::NotificationProvider for ApiNotificationProvider {
                 match channel.respond_to(request) {
                     Ok(v) => rocket::route::Outcome::Success(v),
                     Err(e) => {
-                        #[cfg(feature = "logging")]
-                        log::error!("Failed to create WebSocket: {e}");
+                        crate::error!(notification "api/websockets": "Failed to create WebSocket: {}", e);
                         rocket::route::Outcome::Error(e)
                     }
                 }

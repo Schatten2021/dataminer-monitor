@@ -4,6 +4,7 @@ mod notification_provider_wrapper;
 use std::collections::{HashMap, HashSet};
 use status_provider_wrapper::StatusProvider;
 use notification_provider_wrapper::NotificationProvider;
+use crate::{trace, debug, info};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Default, Clone)]
 struct Config {
@@ -46,45 +47,63 @@ impl State {
         }
     }
     pub(crate) fn register_status_provider<T: crate::StatusProvider>(&mut self, handle: crate::StateHandle) -> Result<(), ()> {
-        if self.status_providers.contains_key(T::ID) { return Err(()) }
+        if self.status_providers.contains_key(T::ID) { trace!("status provider \"{}\" already registered", T::ID); return Err(()) }
         if self.config.disabled.status.contains(T::ID) { return Ok(()) }
+        info!("registering status provider {}", T::ID);
         let config = self.config.status.get(T::ID).cloned();
+        debug!("config for status provider {}: {:?}", T::ID, config);
         let provider = <T as crate::StatusProvider>::new(handle, config.map(<T::Config as serde::Deserialize>::deserialize).map(Result::unwrap_or_default).unwrap_or_default());
         self.status_providers.insert(T::ID.to_string(), Box::new(provider));
         Ok(())
     }
     pub(crate) fn unregister_status_provider(&mut self, id: &str) {
+        info!("removing status provider {}", id);
         self.status_providers.remove(id);
     }
 
     pub(crate) fn register_notification_provider<T: crate::NotificationProvider>(&mut self, handle: crate::StateHandle) -> Result<(), ()> {
-        if self.notification_providers.contains_key(T::ID) { return Err(()) }
+        if self.notification_providers.contains_key(T::ID) { trace!("notification provider\"{}\" already registered", T::ID); return Err(()) }
         if self.config.disabled.notifications.contains(T::ID) { return Ok(()); }
+        info!("registering notification provider {}", T::ID);
         let config = self.config.notifications.get(T::ID).cloned();
+        debug!("config for notification provider {}: {:?}", T::ID, config);
         let provider = <T as crate::NotificationProvider>::new(handle, config.map(<T::Config as serde::Deserialize>::deserialize).map(Result::unwrap_or_default).unwrap_or_default());
         self.notification_providers.insert(T::ID.to_string(), std::sync::Arc::new(parking_lot::RwLock::new(provider)));
         Ok(())
     }
     pub(crate) fn unregister_notification_provider(&mut self, id: &str) {
+        info!("removing notification provider {}", id);
         self.notification_providers.remove(id);
     }
 
     pub(crate) fn reload_config(&mut self, path: impl AsRef<std::path::Path>) {
         self.config = Self::load_config(path);
         for status_provider_id in &self.config.disabled.status {
+            debug!("disabling status provider {}", status_provider_id);
             self.status_providers.remove(status_provider_id);
         }
         for notification_provider_id in &self.config.disabled.notifications {
+            debug!("disabling notification provider {}", notification_provider_id);
             self.notification_providers.remove(notification_provider_id);
         }
         for (id, status_provider) in self.status_providers.iter_mut() {
+            trace!("reloading config for status provider {}", id);
             status_provider.reconfigure(self.config.status.get(id).cloned());
         }
         for (id, notification_provider) in self.notification_providers.iter_mut() {
+            trace!("reloading config for notification provider {}", id);
             notification_provider.write().reconfigure(self.config.notifications.get(id).cloned());
         }
     }
     pub(crate) fn send_notification(&self, source_type_id: &str, message: crate::notifications::Notification) {
+        match &message.reason {
+            crate::notifications::NotificationReason::WentOffline => info!("{} {} went offline", source_type_id, message.item_name),
+            crate::notifications::NotificationReason::WentOnline => info!("{} {} went online", source_type_id, message.item_name),
+            crate::notifications::NotificationReason::Seen => info!("{} {} was seen", source_type_id, message.item_name),
+            crate::notifications::NotificationReason::Other(msg) => info!("{} {} {}", source_type_id, message.item_name, msg),
+        }
+        info!("sending notification for {}", source_type_id);
+        debug!("notification contents: {message:?}");
         let source_type_id = source_type_id.to_string();
         #[cfg(feature = "rocket-integration")]
         let _tokio_guard = self.tokio_runtime_handle.enter();

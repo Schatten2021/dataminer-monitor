@@ -16,7 +16,7 @@ pub struct StatusUpdate {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum WebSocketMessage {
     MinerStatusChange(StatusUpdate),
-    MinerPing {
+    Ping {
         type_id: String,
         id: String,
     },

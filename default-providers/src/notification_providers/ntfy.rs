@@ -1,6 +1,12 @@
 use super::Filter;
 use state_management::{Notification, StateHandle};
 use std::collections::HashMap;
+macro_rules! debug {
+    ($msg:literal $(,$args:expr)*) => {crate::debug!(notification "ntfy": $msg $(,$args)*)};
+}
+macro_rules! trace {
+    ($msg:literal $(,$args:expr)*) => {crate::trace!(notification "ntfy": $msg $(,$args)*)};
+}
 
 fn default_message() -> String {
     "{source_name} {reason}".to_string()
@@ -28,9 +34,10 @@ pub struct Config {
     behaviour: Option<Filter>,
     auth_token: Option<String>,
 }
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone, Debug)]
 struct NotificationBody {
     topic: String,
+    #[serde(skip_serializing_if="Option::is_none")]
     message: Option<String>,
     #[serde(skip_serializing_if="Option::is_none")]
     title: Option<String>,
@@ -97,20 +104,22 @@ impl state_management::NotificationProvider for NtfyNotificationProvider {
             ("source_id".to_string(), notification.item_id.clone()),
             ("source_name".to_string(), notification.item_name.clone()),
         ]);
+        debug!("sending ntfy notification with format values: {:?}", format_values);
         let client = reqwest::Client::new();
         for config in &self.config {
             use strfmt::Format;
             if !config.behaviour.clone().unwrap_or_default()
                 .allows(&source_id, &notification) { continue; }
+            debug!("sending ntfy notification to {}", config.base);
             let title = config.title.as_ref().map(|t| {
                 t.format(&format_values).unwrap_or_else(|_| t.clone())
             });
             let message = config.message.format(&format_values).unwrap_or_else(|_| config.message.clone());
 
-
             let mut body = NotificationBody::from(config);
             body.message = Some(message.clone());
             body.title = title;
+            trace!("finished ntfy notification: {:?}", body);
             let mut request = client.post(&config.base)
                 .json(&body);
             if let Some(token) = &config.auth_token {
