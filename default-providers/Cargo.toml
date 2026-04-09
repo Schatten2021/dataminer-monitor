@@ -13,6 +13,7 @@ minecraft-status-provider = ["dep:minecraft-net", "dep:parking_lot", "chrono/ser
 email-notification-provider = ["serde/derive", "lettre/smtp-transport", "state-management/serde-traits"]
 api-notification-provider = ["dep:rocket", "state-management/rocket-integration", "dep:api-types", "rocket/json"]
 api-notification-provider-websockets = ["api-notification-provider", "dep:ws", "dep:parking_lot"]
+api-notification-provider-cors = ["api-notification-provider"]
 website-notification-provider = ["dep:rocket", "state-management/rocket-integration", "api-notification-provider"]
 website-notification-provider-hot-reload = ["website-notification-provider"]
 website-notification-provider-include-default-website = ["website-notification-provider"]
@@ -26,7 +27,7 @@ status-provider = ["dataminer-status-provider", "website-status-provider", "mine
 notification-provider = ["email-notification-provider", "api-notification-provider", "website-notification-provider"]
 all-provider = ["status-provider", "notification-provider"]
 
-default = ["all-provider", "logging", "website-notification-provider-hot-reload", "api-notification-provider-websockets", "website-notification-provider-include-default-website"]
+default = ["all-provider", "logging", "website-notification-provider-hot-reload", "api-notification-provider-websockets", "api-notification-provider-cors", "website-notification-provider-include-default-website"]
 
 [dependencies]
 # all

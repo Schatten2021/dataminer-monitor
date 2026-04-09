@@ -12,15 +12,17 @@ server-status-source = ["default-providers/website-status-provider"]
 minecraft-server-status-source = ["default-providers/minecraft-status-provider"]
 frontend-website = ["default-providers/website-notification-provider"]
 frontend-websocket = ["default-providers/api-notification-provider-websockets"]
+api-cors = ["default-providers/api-notification-provider-cors"]
 ntfy-notifications = ["default-providers/ntfy-notification-provider"]
+logging = ["default-providers/logging", "state-management/logging"]
 
 all-notifications = ["e-mail-notifications", "frontend-website", "frontend-websocket", "ntfy-notifications"]
 all-data-sources = ["dataminer-status-source", "server-status-source", "minecraft-server-status-source"]
 
-default = ["state-management/default", "all-notifications", "all-data-sources", "default-providers/logging", "default-providers/website-notification-provider-hot-reload"]
+default = ["all-notifications", "all-data-sources", "logging", "default-providers/website-notification-provider-hot-reload", "api-cors"]
 
 [dependencies]
 # core server functionality
 rocket = { version = "0.5.1", features = ["json"] }
 state-management = { path = "state-management", default-features = false }
-default-providers = { path = "default-providers", features = ["all-provider"] }
+default-providers = { path = "default-providers", default-features = false }

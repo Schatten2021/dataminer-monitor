@@ -34,15 +34,16 @@ These can be activated/deactivated via `--no-default-features --features <foo,ba
 
 The feature flags are the following:
 
-| flag                             | what does it toggle?                                                  |
-|----------------------------------|-----------------------------------------------------------------------|
-| `e-mail-notifications`           | the support sending E-Mails                                           |
-| `frontend-website`               | The web frontend                                                      |
-| `frontend-websocket`             | The websocket (for live updates; no this isn't in `frontent-website`) |
-| `ntfy-notifications`             | The NTFY client able to send out push notifications                   |
-| `data-miner-status-source`       | Whether dataminers as a status source are supported                   |
-| `server-status-source`           | The website monitoring                                                |
-| `minecraft-server-status-source` | Support for pinging minecraft servers                                 |
+| flag                             | what does it toggle?                                                                                                                    |
+|----------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| `e-mail-notifications`           | the support sending E-Mails                                                                                                             |
+| `frontend-website`               | The web frontend                                                                                                                        |
+| `frontend-websocket`             | The websocket (for live updates; no this isn't in `frontent-website`)                                                                   |
+| `frontend-cors`                  | Enables [CORS](https://developer.mozilla.org/de/docs/Web/HTTP/Guides/CORS) for the API. (Note: Is _not_ enabled via `all-notifications` |
+| `ntfy-notifications`             | The NTFY client able to send out push notifications                                                                                     |
+| `data-miner-status-source`       | Whether dataminers as a status source are supported                                                                                     |
+| `server-status-source`           | The website monitoring                                                                                                                  |
+| `minecraft-server-status-source` | Support for pinging minecraft servers                                                                                                   |
 
 Then there are the `all-notifications` & `all-data-sources` flags which I think are pretty self-explanatory.
 

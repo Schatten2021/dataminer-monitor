@@ -92,7 +92,7 @@ impl state_management::NotificationProvider for ApiNotificationProvider {
         }
         let mut path = &path[self.config.route.len()..];
         if path.starts_with("/") { path = &path[1..]; }
-        match path {
+        let outcome = match path {
             "all_stati" | "all_statuses" => {
                 let data = self.state_handle.all_stati();
                 let api_data: api_types::AllStatiResponse = data.into_iter().map(|(id, values)| {(id, values.into_iter()
@@ -146,6 +146,21 @@ impl state_management::NotificationProvider for ApiNotificationProvider {
                 }
             },
             _ => rocket::route::Outcome::Forward((data, rocket::http::Status::NotFound)),
+        };
+        match outcome {
+            rocket::route::Outcome::Success(mut response) => {
+                #[cfg(feature = "api-notification-provider-cors")]
+                {
+                    macro_rules! set_header {
+                        ($name:literal, $val:literal) => {response.set_header(::rocket::http::Header::new($name, $val))};
+                    }
+                    set_header!("Access-Control-Allow-Origin", "*");
+                    set_header!("Access-Control-Allow-Methods", "GET");
+                    set_header!("Access-Control-Allow-Headers", "*");
+                }
+                rocket::route::Outcome::Success(response)
+            }
+            v => v,
         }
     }
 }
