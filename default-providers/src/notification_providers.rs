@@ -20,11 +20,11 @@ pub use ntfy::NtfyNotificationProvider;
 #[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq, Debug)]
 pub struct Filter {
     #[serde(flatten)]
-    reason_filter: ReasonFilter,
+    reason_filter: Option<ReasonFilter>,
     #[serde(flatten)]
-    id_filter: IdFilter,
+    id_filter: Option<IdFilter>,
     #[serde(flatten)]
-    type_filter: TypeFilter,
+    type_filter: Option<TypeFilter>,
 }
 macro_rules! filter {
     ($name:ident<$ty:ty> {
@@ -79,16 +79,21 @@ filter!(TypeFilter<String> {
 impl Default for Filter {
     fn default() -> Self {
         Self {
-            reason_filter: ReasonFilter::BlackList(HashSet::from([state_management::NotificationReason::Seen])),
-            id_filter: IdFilter::default(),
-            type_filter: TypeFilter::default(),
+            reason_filter: None,
+            id_filter: None,
+            type_filter: None,
         }
     }
 }
 impl Filter {
     pub fn allows(&self, source_type_id: &String, notification: &state_management::Notification) -> bool {
-        self.reason_filter.allows(&notification.reason) &&
-            self.type_filter.allows(source_type_id) &&
-            self.id_filter.allows(&notification.item_id)
+        macro_rules! allows {
+            ($filter:ident: $val:expr) => {
+                self.$filter.as_ref().map(|f| f.allows($val)).unwrap_or(true)
+            };
+        }
+        (allows!(reason_filter: &notification.reason) && !(self.reason_filter.is_none() && notification.reason == state_management::NotificationReason::Seen)) &&
+            allows!(type_filter: source_type_id) &&
+            allows!(id_filter: &notification.item_id)
     }
 }

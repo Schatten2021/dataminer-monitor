@@ -39,7 +39,7 @@ The feature flags are the following:
 | `e-mail-notifications`           | the support sending E-Mails                                                                                                             |
 | `frontend-website`               | The web frontend                                                                                                                        |
 | `frontend-websocket`             | The websocket (for live updates; no this isn't in `frontent-website`)                                                                   |
-| `frontend-cors`                  | Enables [CORS](https://developer.mozilla.org/de/docs/Web/HTTP/Guides/CORS) for the API. (Note: Is _not_ enabled via `all-notifications` |
+| `api-cors`                       | Enables [CORS](https://developer.mozilla.org/de/docs/Web/HTTP/Guides/CORS) for the API. (Note: Is _not_ enabled via `all-notifications` |
 | `ntfy-notifications`             | The NTFY client able to send out push notifications                                                                                     |
 | `data-miner-status-source`       | Whether dataminers as a status source are supported                                                                                     |
 | `server-status-source`           | The website monitoring                                                                                                                  |
@@ -184,6 +184,7 @@ In addition to the ntfy json fields and the [Whitelist/Blacklist](#whitelistblac
 
 Note: The `title` and `message` fields are formatted strings, so you can write something like:
 ```toml
+[[notifications.ntfy]]
 title = "{source_name} {reason} just now."
 message = "{source_name} (id: {source_id}; type: {type_id}) just {reason}"
 ```

@@ -4,6 +4,9 @@
 // mod notifications;
 
 fn init_state() -> Result<state_management::State, ()> {
+    #[cfg(debug_assertions)]
+    rocket::log::private::set_max_level(rocket::log::private::LevelFilter::Trace);
+
     let state = state_management::State::default();
     #[cfg(feature = "dataminer-status-source")]
     state.register_status_provider::<default_providers::status_providers::DataminerStatusProvider>()?;

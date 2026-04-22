@@ -18,7 +18,7 @@ pub struct Config {
     name: String,
     subscribers: Vec<Subscriber>,
     #[serde(flatten)]
-    behaviour: Option<Filter>,
+    behaviour: Filter,
 }
 impl Default for Config {
     fn default() -> Self {
@@ -83,8 +83,7 @@ impl state_management::NotificationProvider for EmailNotificationProvider {
         self.config = config;
     }
     fn send(&self, source_id: String, notification: state_management::Notification) {
-        if !self.config.behaviour.clone().unwrap_or_default()
-            .allows(&source_id, &notification) { return; }
+        if !self.config.behaviour.allows(&source_id, &notification) { return; }
         let cloned = self.clone();
         std::thread::spawn(move || {
             if let Err(e) = cloned.send_message(

@@ -31,7 +31,7 @@ pub struct Config {
     email: Option<String>,
     call: Option<String>,
     #[serde(flatten)]
-    behaviour: Option<Filter>,
+    behaviour: Filter,
     auth_token: Option<String>,
 }
 #[derive(serde::Serialize, Clone, Debug)]
@@ -90,6 +90,7 @@ impl state_management::NotificationProvider for NtfyNotificationProvider {
     type Config = Vec<Config>;
 
     fn new(_state: StateHandle, config: Self::Config) -> Self {
+        trace!("creating new NTFY notification provider with config: {:?}", config);
         Self { config, }
     }
 
@@ -108,8 +109,10 @@ impl state_management::NotificationProvider for NtfyNotificationProvider {
         let client = reqwest::Client::new();
         for config in &self.config {
             use strfmt::Format;
-            if !config.behaviour.clone().unwrap_or_default()
-                .allows(&source_id, &notification) { continue; }
+            if !config.behaviour.allows(&source_id, &notification) {
+                trace!("message filtered out through config");
+                continue; 
+            }
             debug!("sending ntfy notification to {}", config.base);
             let title = config.title.as_ref().map(|t| {
                 t.format(&format_values).unwrap_or_else(|_| t.clone())

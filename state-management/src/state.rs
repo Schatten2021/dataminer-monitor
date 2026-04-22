@@ -33,7 +33,10 @@ pub(crate) struct State {
 impl State {
     fn load_config(path: impl AsRef<std::path::Path>) -> Config {
         toml::from_str(&std::fs::read_to_string(path).unwrap_or_default())
-            .unwrap_or_default()
+            .unwrap_or_else(|e| {
+                trace!("invalid toml config: {e}");
+                Default::default()
+            })
     }
     pub(crate) fn create(config_path: impl AsRef<std::path::Path>) -> Self {
         #[cfg(feature = "rocket-integration")]
@@ -67,7 +70,12 @@ impl State {
         info!("registering notification provider {}", T::ID);
         let config = self.config.notifications.get(T::ID).cloned();
         debug!("config for notification provider {}: {:?}", T::ID, config);
-        let provider = <T as crate::NotificationProvider>::new(handle, config.map(<T::Config as serde::Deserialize>::deserialize).map(Result::unwrap_or_default).unwrap_or_default());
+        let config = config.map(<T::Config as serde::Deserialize>::deserialize)
+            .map(|res| {
+                res.map_err(|e| trace!("error reading config for notification provider {}: {e}", T::ID))
+                    .unwrap_or_default()
+            }).unwrap_or_default();
+        let provider = <T as crate::NotificationProvider>::new(handle, config);
         self.notification_providers.insert(T::ID.to_string(), std::sync::Arc::new(parking_lot::RwLock::new(provider)));
         Ok(())
     }
