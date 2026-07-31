@@ -1,30 +1,5 @@
-// mod state;
-// mod config;
-// mod routes;
-// mod notifications;
 
-fn init_state() -> Result<state_management::State, ()> {
-    #[cfg(debug_assertions)]
-    rocket::log::private::set_max_level(rocket::log::private::LevelFilter::Trace);
+#[tokio::main]
+async fn main() {
 
-    let state = state_management::State::default();
-    #[cfg(feature = "dataminer-status-source")]
-    state.register_status_provider::<default_providers::status_providers::DataminerStatusProvider>()?;
-    #[cfg(feature = "server-status-source")]
-    state.register_status_provider::<default_providers::status_providers::ServerStatusProvider>()?;
-    #[cfg(feature = "minecraft-server-status-source")]
-    state.register_status_provider::<default_providers::status_providers::MinecraftStatusProvider>()?;
-    #[cfg(feature = "e-mail-notifications")]
-    state.register_notification_provider::<default_providers::notification_providers::EmailNotificationProvider>()?;
-    #[cfg(feature = "frontend-website")]
-    state.register_notification_provider::<default_providers::notification_providers::WebsiteNotificationProvider>()?;
-    #[cfg(feature = "ntfy-notifications")]
-    state.register_notification_provider::<default_providers::notification_providers::NtfyNotificationProvider>()?;
-    Ok(state)
 }
-
-#[rocket::launch]
-async fn launch() -> _ {
-    rocket::build().mount("/", init_state().unwrap())
-}
-
