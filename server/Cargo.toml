@@ -1,0 +1,17 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+
+[dependencies]
+untyped = { version = "0.3", registry = "kellnr", features = ["type-map"] }
+serde = { workspace = true, features = ["derive"] }
+utils = { workspace = true, features = ["never"] }
+parking_lot = { workspace = true, features = ["arc_lock"] }
+chrono = { workspace = true, features = ["serde"] }
+tracing.workspace = true
+toml.workspace = true
+axum.workspace = true
+async-trait.workspace = true

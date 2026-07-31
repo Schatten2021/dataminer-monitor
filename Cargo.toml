@@ -1,5 +1,5 @@
 [workspace]
-members = ["status-server-core"]
+members = ["server"]
 resolver = "3"
 
 [workspace.dependencies]
@@ -7,6 +7,13 @@ tracing = "0.1"
 axum = "0.8"
 tokio = "1"
 thiserror = "2"
+serde = "1"
+utils = { version = "0.4", registry = "kellnr"}
+parking_lot = "0.12"
+chrono = "0.4"
+toml = "1.1"
+server = { path = "server" }
+async-trait = "0.1"
 
 [package]
 name = "status-server"
@@ -18,3 +25,5 @@ publish = ["kellnr"]
 tracing.workspace = true
 tracing-subscriber = { version = "0.3", features = ["parking_lot", "tracing-log"] }
 tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
+server.workspace = true
+axum.workspace = true
