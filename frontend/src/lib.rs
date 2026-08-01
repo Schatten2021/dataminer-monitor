@@ -30,6 +30,12 @@ use yew::{Context, Html};
 use crate::status::AppState;
 use api_types::{ApiResponse, States};
 
+
+#[cfg(debug_assertions)]
+const LEVEL: tracing::Level = tracing::Level::TRACE;
+#[cfg(not(debug_assertions))]
+const LEVEL: tracing::Level = tracing::Level::INFO;
+
 #[wasm_bindgen::prelude::wasm_bindgen(start)]
 /// runs the frontend.
 ///
@@ -38,7 +44,7 @@ use api_types::{ApiResponse, States};
 pub fn run() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     tracing_wasm::set_as_global_default_with_config(tracing_wasm::WASMLayerConfigBuilder::new()
-        .set_max_level(tracing::Level::TRACE)
+        .set_max_level(LEVEL)
         .build());
     // tracing_subscriber::fmt()
     //     .with_max_level(LevelFilter::TRACE)

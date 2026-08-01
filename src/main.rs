@@ -21,15 +21,22 @@ reason = "don't want these lints."
 use axum::routing::any;
 use clap::Parser;
 use std::path::PathBuf;
+use tracing::info;
 use tracing::level_filters::LevelFilter;
+
+#[cfg(debug_assertions)]
+const LEVEL: LevelFilter = LevelFilter::TRACE;
+#[cfg(not(debug_assertions))]
+const LEVEL: LevelFilter = LevelFilter::INFO;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(LevelFilter::TRACE)
+        .with_max_level(LEVEL)
         .init();
 
     let args = Args::parse();
+    info!("parsed args: {args:?}");
 
     let server = server::Server::new(args.config_file);
     server.add_component::<default_components::WebsiteStatuse>()
@@ -41,6 +48,7 @@ async fn main() {
     let router = axum::Router::new()
         .route("/", any(server.clone()))
         .route("/{*any}", any(server.clone()));
+    info!("listening on http://{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind((args.host, args.port)).await.unwrap();
     axum::serve(listener, router).await.unwrap();
 }

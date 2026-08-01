@@ -69,7 +69,7 @@ dependencies = [
 
 [[package]]
 name = "api-types"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
  "chrono",
  "serde",
@@ -438,7 +438,7 @@ checksum = "a4ae5f15dda3c708c0ade84bfee31ccab44a3da4f88015ed22f63732abe300c8"
 
 [[package]]
 name = "default-components"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
  "api-types",
  "axum",
@@ -2216,7 +2216,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -2226,7 +2226,6 @@ dependencies = [
  "toml",
  "tracing",
  "untyped",
- "utils",
 ]
 
 [[package]]

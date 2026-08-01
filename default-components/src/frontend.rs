@@ -11,7 +11,7 @@ impl Component for Frontend {
     type ConfigError = Never;
 
     fn init(handle: ComponentHandle, (): Self::Config) -> Result<Self, Self::ConfigError> {
-        handle.add_notification_provider_dependency::<Api>();
+        tokio::spawn(async move { handle.add_notification_provider_dependency::<Api>()});
         Ok(Self)
     }
 
