@@ -46,6 +46,7 @@ impl<T> Default for SingleFilter<T> {
     }
 }
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all="snake_case")]
 pub enum StateChange {
     #[serde(alias="create-entity", alias="create")]
     CreateEntity,
@@ -55,6 +56,7 @@ pub enum StateChange {
     OnlineStateChange(Option<bool>)
 }
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all="snake_case")]
 pub enum SingleEvent {
     #[serde(alias="create")]
     CreateEntity,
@@ -68,6 +70,7 @@ pub struct AttributeChange {
     event: AttributeEvent,
 }
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash, Default)]
+#[serde(rename_all="snake_case")]
 pub enum AttributeEvent {
     #[default]
     Any,

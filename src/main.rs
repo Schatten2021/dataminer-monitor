@@ -12,7 +12,8 @@ async fn main() {
         .add_notification_provider::<default_components::Api>()
         .add_component::<default_components::Frontend>()
         .add_component::<default_components::DataminerStatus>()
-        .add_component::<default_components::MinecraftStatus>();
+        .add_component::<default_components::MinecraftStatus>()
+        .add_notification_provider::<default_components::EmailNotificationProvider>();
     let router = axum::Router::new()
         .route("/", any(server.clone()))
         .route("/{*any}", any(server.clone()));

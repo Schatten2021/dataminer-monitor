@@ -154,6 +154,7 @@ fn send_ping(url: &str, port: u16) -> Result<StatusResponse, ()> {
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[allow(non_snake_case, reason="this a JSON struct that I don't control.")]
 struct StatusResponse {
     version: StatusResponseVersion,
     players: Option<StatusResponsePlayers>,
@@ -176,8 +177,4 @@ struct StatusResponsePlayers {
 struct StatusResponsePlayerSample {
     name: String,
     id: String,
-}
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-struct StatusResponseDescription {
-    text: String,
 }

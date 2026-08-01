@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Formatter;
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct State {
@@ -38,4 +39,26 @@ pub enum AttributeValue {
         value: Box<AttributeValue>,
     },
     Map(Vec<(AttributeValue, AttributeValue)>)
+}
+impl std::fmt::Display for AttributeValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AttributeValue::Unit => write!(f, "()"),
+            AttributeValue::Boolean(bool) => bool.fmt(f),
+            AttributeValue::Count(num) => num.fmt(f),
+            AttributeValue::Date(date) => date.format("%d.%m.%Y %H:%M:%S%.3f").fmt(f),
+            AttributeValue::Percentage(v) => write!(f, "{:.2}", v * 100.0),
+            AttributeValue::List(list) => write!(f, "[{}]", list.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>().join(", ")),
+            AttributeValue::Number(num) => num.fmt(f),
+            AttributeValue::String(str) => str.fmt(f),
+            AttributeValue::Enum { variant, value } => write!(f, "{variant}: {value}"),
+            AttributeValue::Map(map) => write!(f, "{{{}}}", map.iter()
+                .map(|(k, v)| format!("{k}: {v}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+            )
+        }
+    }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use axum::extract::Request;
-use tokio::time::MissedTickBehavior;
+use tokio::time::{timeout, MissedTickBehavior};
 use utils::Never;
 use server::{AttributeValue, Component, ComponentHandle, RequestHandle};
 
@@ -78,25 +78,29 @@ fn spawn_timeout_task(id: String, config: Config, handle: ComponentHandle) -> to
     ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
     tokio::spawn(async move {
-        ticker.tick().await;
-        let last_seen = match handle.get_attribute(&id, LAST_SEEN_ID) {
-            Some(AttributeValue::Date(dt)) => Some(dt),
-            _ => {
-                trace!("dataminer never seen before");
-                None
-            },
-        };
-        let now = chrono::Utc::now();
-        let is_online = matches!(last_seen, Some(timestamp) if (now - timestamp) > config.timeout);
-        if handle.get_online_state(&id) != Some(is_online) {
-            info!("miner {id} changed to {}", if is_online { "online" } else { "offline" });
-            handle.change_online_state(&id, is_online);
-        }
-        if let Some(last_ping) = last_seen {
-            let diff = chrono::Utc::now() - last_ping;
-            let diff = diff.to_std().expect("last ping somehow after now?");
-            let last_ping_std = std::time::Instant::now() - diff;
-           ticker.reset_at(tokio::time::Instant::from_std(last_ping_std));
+        loop {
+            ticker.tick().await;
+            let last_seen = match handle.get_attribute(&id, LAST_SEEN_ID) {
+                Some(AttributeValue::Date(dt)) => Some(dt),
+                _ => {
+                    trace!("dataminer never seen before");
+                    None
+                },
+            };
+            let now = chrono::Utc::now();
+            let now_std = std::time::Instant::now();
+            let is_online = last_seen.map(|timestamp| (timestamp - now) > config.timeout)
+                .unwrap_or(false);
+            if handle.get_online_state(&id) != Some(is_online) {
+                info!("miner {id} changed to {}", if is_online { "online" } else { "offline" });
+                handle.change_online_state(&id, is_online);
+                if let Some(last_ping) = last_seen {
+                    let diff = now - last_ping;
+                    let diff = diff.to_std().expect("last ping somehow after now?");
+                    let last_ping_std = now_std - diff;
+                   ticker.reset_at(tokio::time::Instant::from_std(last_ping_std + config.timeout.to_std().unwrap()));
+                }
+            }
         }
     })
 }
