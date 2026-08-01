@@ -1,6 +1,6 @@
 use super::Server;
 use crate::notification_provider::NotificationProvider;
-use crate::{Component, ProviderHandle};
+use crate::{Component, ComponentHandle};
 use parking_lot::RwLock;
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -39,8 +39,8 @@ impl ServerHandle {
     pub fn component_map_mut<C: Component, F: FnOnce(Option<&mut C>) -> V, V>(&self, func: F) -> V {
         func(self.0.write().get_component_mut())
     }
-    fn provider_handle<P: Component>(&self) -> ProviderHandle {
-        ProviderHandle::new::<P>(self.0.clone())
+    fn provider_handle<P: Component>(&self) -> ComponentHandle {
+        ComponentHandle::new::<P>(self.0.clone())
     }
     pub fn get_states(&self) -> HashMap<String, State> {
         self.0.read().get_states()
@@ -56,7 +56,7 @@ impl axum::handler::Handler<(), ()> for ServerHandle {
                 info!("unable to handle request to {}", r.uri());
                 axum::response::Response::builder()
                     .status(404)
-                    .body(axum::body::Body::empty())
+                    .body(axum::body::Body::new(r#"<script> window.socket = new WebSocket("ws://127.0.0.1:8000/api/ws");</script>"#.to_string()))
                     .unwrap()
             }))
         }

@@ -4,4 +4,4 @@ mod owner_handle;
 mod provider_handle;
 
 pub use owner_handle::ServerHandle;
-pub use provider_handle::ProviderHandle;
+pub use provider_handle::ComponentHandle;

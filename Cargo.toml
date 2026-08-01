@@ -1,5 +1,5 @@
 [workspace]
-members = ["server"]
+members = ["api-types","default-components","server"]
 resolver = "3"
 
 [workspace.dependencies]
@@ -14,6 +14,8 @@ chrono = "0.4"
 toml = "1.1"
 server = { path = "server" }
 async-trait = "0.1"
+default-components = { path = "default-components" }
+api-types = { path = "api-types" }
 
 [package]
 name = "status-server"
@@ -27,3 +29,4 @@ tracing-subscriber = { version = "0.3", features = ["parking_lot", "tracing-log"
 tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
 server.workspace = true
 axum.workspace = true
+default-components.workspace = true

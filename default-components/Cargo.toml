@@ -1,0 +1,17 @@
+[package]
+name = "default-components"
+version = "0.1.0"
+edition = "2024"
+
+
+[dependencies]
+api-types.workspace = true
+axum = { workspace = true, features = ["ws"] }
+chrono.workspace = true
+serde.workspace = true
+server.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+utils.workspace = true
+reqwest = "0.13"
+serde_json = "1"

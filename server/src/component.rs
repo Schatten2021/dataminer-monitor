@@ -1,8 +1,8 @@
 use std::pin::Pin;
 // use std::fmt::{Display, Formatter};
-use crate::ProviderHandle;
+use crate::ComponentHandle;
 
-pub(crate) type RequestHandle = Pin<Box<dyn Future<Output=axum::response::Response> + Send + Sync >>;
+pub type RequestHandle = Pin<Box<dyn Future<Output=axum::response::Response> + Send >>;
 
 #[async_trait::async_trait]
 pub trait Component: Sized + Send + Sync + 'static {
@@ -10,7 +10,7 @@ pub trait Component: Sized + Send + Sync + 'static {
     // const TYPE: ComponentType;
     type Config: serde::Serialize + for<'de> serde::Deserialize<'de> + Default;
     type ConfigError: core::error::Error;
-    fn init(server: ProviderHandle, config: Self::Config) -> Result<Self, Self::ConfigError>;
+    fn init(server: ComponentHandle, config: Self::Config) -> Result<Self, Self::ConfigError>;
     fn reconfigure(&mut self, config: Self::Config) -> Result<(), Self::ConfigError>;
     fn try_handle(&self, request: axum::extract::Request) -> Result<RequestHandle, axum::extract::Request> {
         Err(request)

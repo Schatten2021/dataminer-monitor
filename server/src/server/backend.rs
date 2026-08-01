@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use untyped::{TypeMap, Untyped};
 use crate::config::Config;
-use crate::{Component, ProviderHandle};
+use crate::{Component, ComponentHandle};
 use crate::notification::{Notification, NotificationReason};
 use crate::notification_provider::NotificationProvider;
 use crate::state::{AttributeValue, State};
@@ -92,7 +92,7 @@ fn read_config(path: impl AsRef<Path>) -> Config {
 }
 // component management
 impl Server {
-    pub(crate) fn add_notification_provider_dependency<P: NotificationProvider>(&mut self, handle: ProviderHandle, dependant: TypeId) {
+    pub(crate) fn add_notification_provider_dependency<P: NotificationProvider>(&mut self, handle: ComponentHandle, dependant: TypeId) {
         self.add_component_dependency::<P>(handle, dependant);
         let info = NotificationProviderInfo {
             notify: notify_provider::<P>
@@ -100,14 +100,14 @@ impl Server {
         self.components.additional_data_mut::<P>()
             .expect("just inserted it").notification_provider_info = Some(info)
     }
-    pub(crate) fn add_component_dependency<C: Component>(&mut self, handle: ProviderHandle, dependant: TypeId) {
+    pub(crate) fn add_component_dependency<C: Component>(&mut self, handle: ComponentHandle, dependant: TypeId) {
         if !self.components.contains_key::<C>() {
             self.add_component::<C>(handle);
         }
         self.components.additional_data_mut::<C>().expect("just checked its existance")
             .required_by.insert(dependant);
     }
-    pub(crate) fn add_notification_provider<P: NotificationProvider>(&mut self, handle: ProviderHandle) {
+    pub(crate) fn add_notification_provider<P: NotificationProvider>(&mut self, handle: ComponentHandle) {
         self.add_component::<P>(handle);
         let info = NotificationProviderInfo {
             notify: notify_provider::<P>
@@ -115,7 +115,7 @@ impl Server {
         self.components.additional_data_mut::<P>()
             .expect("just inserted it").notification_provider_info = Some(info)
     }
-    pub(crate) fn add_component<C: Component>(&mut self, handle: ProviderHandle) {
+    pub(crate) fn add_component<C: Component>(&mut self, handle: ComponentHandle) {
         use serde::Deserialize;
         
         if self.components.contains_key::<C>() {
@@ -249,7 +249,12 @@ impl Server {
             }
         }
     }
+    pub(crate) fn get_status(&self, element_id: &str) -> Option<bool> {
+        self.states.get(element_id)
+            .map(|state| state.online)
+    }
     pub(crate) fn notify(&self, notification: Notification) {
+        trace!("sending out notification: {notification:?}");
         self.components.entries()
             .filter_map(|(data, component)| {
                 data.notification_provider_info.as_ref().zip(Some(component))
