@@ -225,6 +225,10 @@ impl Server {
         );
         self.notify(notification)
     }
+    pub(crate) fn get_attribute(&self, element_id: &str, attribute_id: &str) -> Option<AttributeValue> {
+        self.states.get(element_id)?
+            .attributes.get(attribute_id).cloned()
+    }
     pub(crate) fn online_status_changed(&mut self, component_id: &'static str, element_id: &str, new_status: bool) {
         match self.states.get_mut(element_id) {
             Some(state) => {

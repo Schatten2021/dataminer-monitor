@@ -55,4 +55,7 @@ impl ComponentHandle {
     pub fn change_attribute(&self, element_id: &str, attribute_id: &str, value: AttributeValue) {
         self.backend.write().attribute_change(self.id, element_id, attribute_id, value)
     }
+    pub fn get_attribute(&self, element_id: &str, attribute_id: &str) -> Option<AttributeValue> {
+        self.backend.read().get_attribute(element_id, attribute_id)
+    }
 }

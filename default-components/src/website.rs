@@ -4,6 +4,8 @@ use server::{AttributeValue, ComponentHandle};
 use utils::Never;
 use crate::filters::SingleFilter;
 
+const LAST_SEEN_ID: &'static str = "website.last_seen";
+
 const fn hourly() -> chrono::Duration { chrono::Duration::hours(1) }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -89,7 +91,7 @@ fn spawn_listen_task(id: String, config: Config, state: ComponentHandle) -> toki
             }
             if new_status {
                 trace!("successfully requested {}", config.url);
-                state.change_attribute(&id, "last_seen", AttributeValue::Date(chrono::Utc::now()))
+                state.change_attribute(&id, LAST_SEEN_ID, AttributeValue::Date(chrono::Utc::now()))
             } else {
                 trace!("failed to request {}", config.url)
             }
