@@ -1,3 +1,64 @@
+Status Server
+-------------
+This is my own status-monitoring server.
+
+# Structure
+It is built around the concept of [Components](#component), [Notification-Provider](#notification-provider) and [Elements](#elements).
+
+## Component
+
+A Component is defined as some part that can either keep track of the state of an `Element`, 
+send notifications (in which case it's also a `NotificationProvider`) or provide some other service
+for the status server (e.g. the frontend).
+
+Every component has its own `ID` which is used to identify the configuration for this configuration (see [Configuration]())
+
+## Notification-Provider
+
+A Notification-Provider provides a means to notify users. 
+How that happens exactly is dependent on the provider, but some (implemented) ways could be E-Mail, Push & Websockets.
+
+These are required to actually ensure that notifications reach their targets.
+
+## Elements
+
+An Element is a single "unit" of status. 
+Each element is either online or offline and has a set of additional attributes that can be set by [Components](#component)
+
+# Configuration
+
+The program accepts a set of command-line arguments for very basic configuration (see `status-server --help` for reference).
+These are mainly:
+- `-p`: Sets the port
+- `-b`: binds to the given address
+- `-c`: selects a different configuration file
+- `-h`: prints the help
+- `-V`: prints the version
+
+Any further configuration is done inside of the `config.toml` (or whichever toml file you passed to `-c`).
+
+## Components
+you can enable and disable [Components](#component) (works at runtime) by putting their ids in the `ignored` config field.
+
+**WARNING!**: Ignoring a dependency of another [Component](#component) will not allow that dependency to be added to the 
+server, even if that breaks other [Component](#component). Deleting a [Component](#component) by removing it and 
+reloading the configuration also removes any dependants.
+
+Each [Component](#component) is configured via its `ID`. 
+The ids for the default components are:
+
+| Component | ID        | config reference                |
+|-----------|-----------|---------------------------------|
+| api       | api       | [ref](docs/config/api.md)       |
+| dataminer | miner     | [ref](docs/config/dataminer.md) |
+| email     | email     | [ref](docs/config/email.md)     |
+| frontend  | frontend  | no config                       |
+| minecraft | minecraft | [ref](docs/config/minecraft.md) |
+| ntfy      | ntfy      | [ref](docs/config/ntfy.md)      |
+| website   | website   | [ref](docs/config/website.md)   |
+
+Additionally, many configurations use [filters](docs/config/filter.md) to provide a uniform filtering interface.
+
 # Dataminer Monitor
 This is my own rocket-based monitor server for my data-miners.
 

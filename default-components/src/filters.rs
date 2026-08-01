@@ -109,9 +109,19 @@ impl<Item> SingleFilter<Item> {
     /// checks whether the filter allows the given input.
     pub fn allows<V>(&self, input: &V) -> bool
     where Item: Filtering<V> {
-        self.whitelist.iter().any(|f| f.matches(input)) ||
-            !self.blacklist.iter().any(|f| f.matches(input))
+        self.whitelisted(input) || !self.blacklisted(input)
     }
+    /// checks whether the input is whitelisted
+    pub fn whitelisted<V>(&self, input: &V) -> bool
+    where Item: Filtering<V> {
+        self.whitelist.iter().any(|f| f.matches(input))
+    }
+    /// checks whether the input is blacklisted
+    pub fn blacklisted<V>(&self, input: &V) -> bool
+    where Item: Filtering<V> {
+        self.blacklist.iter().any(|f| f.matches(input))
+    }
+    
 }
 /// Helper trait for usage with [`SingleFilter`].
 ///

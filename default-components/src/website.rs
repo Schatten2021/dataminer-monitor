@@ -10,8 +10,6 @@ const fn hourly() -> chrono::Duration { chrono::Duration::hours(1) }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Config {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    name: Option<String>,
     url: String,
     #[serde(default="hourly")]
     interval: chrono::Duration,
@@ -21,7 +19,6 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            name: None,
             url: "https://example.com".to_string(),
             interval: hourly(),
             status: SingleFilter::default()
@@ -79,7 +76,6 @@ fn spawn_listen_task(id: String, config: Config, state: ComponentHandle) -> toki
     let mut ticker = tokio::time::interval(config.interval.to_std().expect("couldn't convert interval to std interval"));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
     tokio::task::spawn(async move {
-        let name = config.name.clone().unwrap_or_else(|| id.clone());
         let client = reqwest::Client::new();
         loop {
             ticker.tick().await;
@@ -87,7 +83,7 @@ fn spawn_listen_task(id: String, config: Config, state: ComponentHandle) -> toki
             let old_state = state.get_online_state(&id);
             trace!("old state: {old_state:?}; new_state: {new_status}");
             if Some(new_status) != old_state {
-                info!("webserver {} has changed", name);
+                info!("webserver {} has changed", id);
                 state.change_online_state(&id, new_status);
             }
             if new_status {
@@ -100,9 +96,10 @@ fn spawn_listen_task(id: String, config: Config, state: ComponentHandle) -> toki
     })
 }
 async fn request_website(client: &reqwest::Client, config: &Config) -> Result<bool, ()> {
-    Ok(config.status.allows(&client.get(&config.url)
+    let status = client.get(&config.url)
         .send().await.map_err(|e| {
         error!("couldn't request {:?}: {e}", config.url);
     })?
-        .status().as_u16()))
+        .status();
+    Ok(config.status.whitelisted(&status.as_u16()) || status.is_success() && !config.status.blacklisted(&status.as_u16()))
 }

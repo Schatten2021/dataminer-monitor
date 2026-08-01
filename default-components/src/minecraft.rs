@@ -10,8 +10,6 @@ pub struct Config {
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct JavaConfig {
     pub url: String,
-    #[serde(default)]
-    pub name: String,
     #[serde(default="java_default_port")]
     pub port: u16,
     #[serde(default="default_timeout")]
