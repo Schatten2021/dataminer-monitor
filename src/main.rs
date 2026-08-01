@@ -9,11 +9,11 @@ async fn main() {
 
     let server = server::Server::new("config.toml".into());
     server.add_component::<default_components::WebsiteStatuse>()
-        .add_notification_provider::<default_components::Api>()
         .add_component::<default_components::Frontend>()
         .add_component::<default_components::DataminerStatus>()
         .add_component::<default_components::MinecraftStatus>()
-        .add_notification_provider::<default_components::EmailNotificationProvider>();
+        .add_notification_provider::<default_components::EmailNotificationProvider>()
+        .add_notification_provider::<default_components::NtfyNotificationProvider>();
     let router = axum::Router::new()
         .route("/", any(server.clone()))
         .route("/{*any}", any(server.clone()));
