@@ -1,5 +1,5 @@
 [workspace]
-members = ["api-types","default-components","server"]
+members = ["api-types","default-components", "frontend","server"]
 resolver = "3"
 
 [workspace.dependencies]

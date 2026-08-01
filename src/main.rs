@@ -9,7 +9,8 @@ async fn main() {
 
     let server = server::Server::new("config.toml".into());
     server.add_component::<default_components::WebsiteStatuse>()
-        .add_notification_provider::<default_components::Api>();
+        .add_notification_provider::<default_components::Api>()
+        .add_component::<default_components::Frontend>();
     let router = axum::Router::new()
         .route("/", any(server.clone()))
         .route("/{*any}", any(server.clone()));
