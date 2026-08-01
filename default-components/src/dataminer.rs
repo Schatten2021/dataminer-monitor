@@ -5,7 +5,7 @@ use utils::Never;
 use server::{AttributeValue, Component, ComponentHandle, RequestHandle};
 
 
-const LAST_SEEN_ID: &'static str = "miner.last_seen";
+const LAST_SEEN_ID: &str = "miner.last_seen";
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct Config {
@@ -39,8 +39,9 @@ impl Component for DataminerStatus {
             .filter(|k| !config.contains_key(*k))
             .cloned()
             .collect::<Vec<_>>() {
-            self.timeout_handles.remove(&id)
-                .map(|h| h.abort());
+            if let Some(old) =self.timeout_handles.remove(&id) {
+                old.abort();
+            }
             self.config.remove(&id);
         }
         for (id, new_config) in config.into_iter()
@@ -51,8 +52,9 @@ impl Component for DataminerStatus {
         {
             let handle = self.server.clone();
             self.config.insert(id.clone(), new_config.clone());
-            self.timeout_handles.insert(id.clone(), spawn_timeout_task(id, new_config, handle))
-                .map(|old| old.abort());
+            if let Some(old) = self.timeout_handles.insert(id.clone(), spawn_timeout_task(id, new_config, handle)) {
+                old.abort();
+            }
         }
         Ok(())
     }

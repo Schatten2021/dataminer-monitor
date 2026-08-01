@@ -41,11 +41,11 @@ fn render_attr_value(value: &AttributeValue) -> String {
         AttributeValue::Date(d) => d.naive_local().format("%d.%m.%Y %H:%M:%S%.3f").to_string(),
         AttributeValue::Percentage(v) => format!("{:.2}", v * 100.0),
         AttributeValue::List(values) => format!("[{}]", values.iter()
-            .map(|v| render_attr_value(v))
+            .map(render_attr_value)
             .collect::<Vec<_>>()
             .join(", ")),
         AttributeValue::Number(v) => format!("{v}"),
-        AttributeValue::String(v) => format!("{v}"),
+        AttributeValue::String(v) => v.to_string(),
         AttributeValue::Enum(v) => format!("{}({})", v.variant, render_attr_value(&v.value)),
         AttributeValue::Map(map) => format!("{{{}}}", map.iter()
             .map(|(k, v)| format!("{}: {}", render_attr_value(k), render_attr_value(v)))

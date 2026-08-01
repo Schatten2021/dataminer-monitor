@@ -4,7 +4,7 @@ use server::{AttributeValue, ComponentHandle};
 use utils::Never;
 use crate::filters::SingleFilter;
 
-const LAST_SEEN_ID: &'static str = "website.last_seen";
+const LAST_SEEN_ID: &str = "website.last_seen";
 
 const fn hourly() -> chrono::Duration { chrono::Duration::hours(1) }
 
@@ -56,8 +56,9 @@ impl server::Component for WebsiteStatuse {
             .filter(|k| !config.contains_key(*k))
             .cloned()
             .collect::<Vec<_>>() {
-            self.task_handles.remove(&id)
-                .map(|h| h.abort());
+            if let Some(old) = self.task_handles.remove(&id) {
+                old.abort();
+            }
             self.config.remove(&id);
         }
         for (id, new_config) in config.into_iter()
@@ -68,8 +69,9 @@ impl server::Component for WebsiteStatuse {
         {
             let handle = self.state.clone();
             self.config.insert(id.clone(), new_config.clone());
-            self.task_handles.insert(id.clone(), spawn_listen_task(id, new_config, handle))
-                .map(|old| old.abort());
+            if let Some(old) = self.task_handles.insert(id.clone(), spawn_listen_task(id, new_config, handle)) {
+                old.abort();
+            }
         }
         Ok(())
     }

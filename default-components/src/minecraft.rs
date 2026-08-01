@@ -51,8 +51,9 @@ impl Component for MinecraftStatus {
             .filter(|k| !config.java.contains_key(*k))
             .cloned()
             .collect::<Vec<_>>() {
-            self.task_handles.remove(&id)
-                .map(|h| h.abort());
+            if let Some(old) = self.task_handles.remove(&id) {
+                old.abort()
+            }
             self.config.java.remove(&id);
         }
         for (id, new_config) in config.java.into_iter()
@@ -62,8 +63,9 @@ impl Component for MinecraftStatus {
             .collect::<Vec<_>>()
         {
             self.config.java.insert(id.clone(), new_config.clone());
-            self.task_handles.insert(id.clone(), start_ping(id, new_config, self.state.clone()))
-                .map(|old| old.abort());
+            if let Some(old) = self.task_handles.insert(id.clone(), start_ping(id, new_config, self.state.clone())) {
+                old.abort();
+            }
         }
         Ok(())
     }

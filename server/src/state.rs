@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Formatter;
 
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct State {
     pub online: bool,
     pub attributes: HashMap<String, AttributeValue>

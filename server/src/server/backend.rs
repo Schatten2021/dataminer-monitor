@@ -53,6 +53,7 @@ unsafe fn reconfigure_component<P: Component + 'static>(this: &mut Untyped, valu
 }
 /// # SAFETY
 /// The type `C` MUST be the same as the [`Untyped`]
+#[expect(clippy::result_large_err, reason="The error here isn't actually an error, but just the request if we fail to parse it.")]
 unsafe fn try_handle_request<C: Component>(this: &Untyped, request: axum::extract::Request) -> Result<crate::component::RequestHandle, axum::extract::Request> {
     // SAFETY: The correctness of the type is guaranteed by the caller.
     unsafe {
@@ -297,6 +298,7 @@ impl Server {
     }
 }
 impl Server {
+    #[expect(clippy::result_large_err, reason="The error here isn't actually an error, but just the request if we fail to parse it.")]
     pub(crate) fn try_handle_request(&self, mut request: axum::extract::Request) -> Result<crate::component::RequestHandle, axum::extract::Request> {
         for (info, component) in self.components.entries() {
             request = match unsafe { (info.try_handle_request)(component, request) } {

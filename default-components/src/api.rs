@@ -111,6 +111,7 @@ impl server::Component for Api {
                 json!(200, ::api_types::ApiResponse::<_, ()>::Ok($val))
             };
         }
+        #[expect(unused, reason="unused for now, might use it in the future for authenticated routes/etc.")]
         macro_rules! err {
             ($code:literal, $val:expr) => {
                 json!($code, ::api_types::ApiResponse::<(), _>::ClientError($val))

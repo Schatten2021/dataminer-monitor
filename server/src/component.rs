@@ -12,6 +12,7 @@ pub trait Component: Sized + Send + Sync + 'static {
     type ConfigError: core::error::Error;
     fn init(server: ComponentHandle, config: Self::Config) -> Result<Self, Self::ConfigError>;
     fn reconfigure(&mut self, config: Self::Config) -> Result<(), Self::ConfigError>;
+    #[expect(clippy::result_large_err, reason="The error here isn't actually an error, but just the request if we fail to parse it.")]
     fn try_handle(&self, request: axum::extract::Request) -> Result<RequestHandle, axum::extract::Request> {
         Err(request)
     }
