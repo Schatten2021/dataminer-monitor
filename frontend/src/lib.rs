@@ -1,3 +1,21 @@
+//! Frontend for my Status server.
+
+#![cfg_attr(not(debug_assertions), deny(missing_docs))]
+#![cfg_attr(debug_assertions, warn(missing_docs))]
+#![warn(clippy::pedantic)]
+#![warn(clippy::complexity, clippy::suspicious, clippy::perf, clippy::style, clippy::allow_attributes_without_reason)]
+#![allow(
+    clippy::needless_continue,
+    reason = "adding a `continue` often makes the code easier to read."
+)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::doc_markdown,
+    reason = "don't want these lints."
+)]
+#![cfg_attr(not(debug_assertions), deny(clippy::undocumented_unsafe_blocks))]
+#![cfg_attr(debug_assertions, warn(clippy::undocumented_unsafe_blocks))]
+
 mod status;
 mod element_display;
 
@@ -13,6 +31,10 @@ use crate::status::AppState;
 use api_types::{ApiResponse, States};
 
 #[wasm_bindgen::prelude::wasm_bindgen(start)]
+/// runs the frontend.
+///
+/// # Panics
+/// When something goes irrecoverably wrong.
 pub fn run() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     tracing_wasm::set_as_global_default_with_config(tracing_wasm::WASMLayerConfigBuilder::new()
@@ -39,6 +61,26 @@ enum AppMessage {
 impl yew::Component for App {
     type Message = AppMessage;
     type Properties = ();
+    fn create(ctx: &Context<Self>) -> Self {
+        let link = ctx.link().clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let initial: ApiResponse<States, ()> = gloo_net::http::Request::get("/api/current")
+                .send().await.expect("unable to send request to /api/current")
+                .json().await.expect("unable to read api response from /api/current");
+            let data = match initial {
+                ApiResponse::Ok(v) => AppState::from(v),
+                ApiResponse::ServerError(e) => {
+                    error!("server error `{}`: {}", e.id, e.message);
+                    todo!();
+                }
+                ApiResponse::ClientError(()) => panic!("something went wrong...")
+            };
+            link.send_message(Self::Message::LoadedInitial(data));
+        });
+        Self {
+            state: None,
+        }
+    }
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             AppMessage::LoadedInitial(data) => {
@@ -60,34 +102,14 @@ impl yew::Component for App {
                                 continue;
                             }
                         };
-                        link.send_message(AppMessage::ReceivedMessage(message))
+                        link.send_message(AppMessage::ReceivedMessage(message));
                     }
-                })
+                });
             },
             AppMessage::ReceivedMessage(msg) => self.state.as_mut().expect("received websocket message before state was set")
                 .handle(msg)
         }
         true
-    }
-    fn create(ctx: &Context<Self>) -> Self {
-        let link = ctx.link().clone();
-        wasm_bindgen_futures::spawn_local(async move {
-            let initial: ApiResponse<States, ()> = gloo_net::http::Request::get("/api/current")
-                .send().await.expect("unable to send request to /api/current")
-                .json().await.expect("unable to read api response from /api/current");
-            let data = match initial {
-                ApiResponse::Ok(v) => AppState::from(v),
-                ApiResponse::ServerError(e) => {
-                    error!("server error `{}`: {}", e.id, e.message);
-                    todo!();
-                }
-                ApiResponse::ClientError(()) => panic!("something went wrong...")
-            };
-            link.send_message(Self::Message::LoadedInitial(data));
-        });
-        Self {
-            state: None,
-        }
     }
     fn view(&self, _: &Context<Self>) -> Html {
         let Some(state) = &self.state else {

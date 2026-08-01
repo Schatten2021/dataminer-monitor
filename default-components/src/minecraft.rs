@@ -23,6 +23,18 @@ const fn java_default_port() -> u16 {
 const fn default_timeout() -> chrono::Duration {
     chrono::Duration::hours(1)
 }
+/// [`Component`] to allow keeping track of minecraft servers.
+///
+/// # Attributes
+/// Sets the following attributes (if provided by the server):
+/// - `minecraft.version`: The version of the minecraft server
+/// - `minecraft.protocol`: The protocol version of the minecraft server
+/// - `minecraft.players.max`: The maximum number of players that can be online at the same time
+/// - `minecraft.players.online`: The amount of currently online players
+/// - `minecraft.players.sample`: A sample of the players that are online (if any player is online & the server provides it)
+/// - `minecraft.description`: The description of the server
+/// - `minecraft.favicon`: The favicon of the server
+/// - `minecraft.enforces_secure_chat`: whether the server enforces secure chat.
 pub struct MinecraftStatus {
     config: Config,
     task_handles: HashMap<String, tokio::task::JoinHandle<()>>,
@@ -52,14 +64,12 @@ impl Component for MinecraftStatus {
             .cloned()
             .collect::<Vec<_>>() {
             if let Some(old) = self.task_handles.remove(&id) {
-                old.abort()
+                old.abort();
             }
             self.config.java.remove(&id);
         }
         for (id, new_config) in config.java.into_iter()
-            .filter(|(id, new_conf)| self.config.java.get(id)
-                .map(|old_conf| old_conf != new_conf)
-                .unwrap_or(true))
+            .filter(|(id, new_conf)| self.config.java.get(id) != Some(new_conf))
             .collect::<Vec<_>>()
         {
             self.config.java.insert(id.clone(), new_config.clone());
@@ -93,6 +103,7 @@ fn start_ping(id: String, conf: JavaConfig, state: ComponentHandle) -> tokio::ta
                     }
                 }};
             }
+            set_if_unchanged!("minecraft.last_seen", AttributeValue::Date(chrono::Utc::now()));
             set_if_unchanged!("minecraft.version", AttributeValue::String(response.version.name));
             set_if_unchanged!("minecraft.protocol.version", AttributeValue::Number(response.version.protocol.into()));
             if let Some(players) = response.players {
@@ -118,9 +129,9 @@ fn start_ping(id: String, conf: JavaConfig, state: ComponentHandle) -> tokio::ta
                 state.delete_attribute(&id, "minecraft.description");
             }
             if let Some(favicon) = response.favicon {
-                set_if_unchanged!("minecraft.favicon", AttributeValue::String(favicon))
+                set_if_unchanged!("minecraft.favicon", AttributeValue::String(favicon));
             } else {
-                state.delete_attribute(&id, "minecraft.favicon")
+                state.delete_attribute(&id, "minecraft.favicon");
             }
             if let Some(secure_chat) = response.enforcesSecureChat {
                 set_if_unchanged!("minecraft.enforces_secure_chat", AttributeValue::Boolean(secure_chat));
@@ -131,6 +142,7 @@ fn start_ping(id: String, conf: JavaConfig, state: ComponentHandle) -> tokio::ta
                 }
             } else {
                 state.delete_attribute(&id, "minecraft.enforces_secure_chat");
+                state.delete_attribute(&id, "minecraft.retarded");
             }
         }
     })

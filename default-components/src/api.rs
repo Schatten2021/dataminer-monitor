@@ -29,6 +29,13 @@ struct Socket {
     online: AtomicBool,
 }
 
+/// Provides an API for interacting with the status server.
+/// 
+/// Currently implemented:
+/// - [x] current state of all elements
+/// - [ ] current state of specific element
+/// - [ ] attribute of specific element
+/// - [x] websocket sending out [`Notifications`] when they come in
 pub struct Api {
     state: ComponentHandle,
     websockets: Arc<RwLock<Vec<Socket>>>,

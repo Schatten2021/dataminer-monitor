@@ -11,37 +11,73 @@ use axum::extract::Request;
 use crate::state::State;
 
 #[derive(Clone)]
+/// A Handle to a Server, used to configure said server or interact with it outside of [`Component`]s.
+///
+/// Cloning this handle does not clone the server.
+///
+/// # Note
+/// This is also an [`axum::handler::Handle`], so that you can use it in a [`axum::Router::route`]
+/// call.
 pub struct ServerHandle(Arc<RwLock<Server>>);
 impl ServerHandle {
-    // register provider
+    /// creates a new Server loading the config from the given path.
+    #[must_use]
     pub fn new(config_path: PathBuf) -> Self {
         Self(Arc::new(RwLock::new(Server::new(config_path))))
     }
+    /// Adds a new [`Component`] (& dependencies) to the server.
+    ///
+    /// # Note
+    /// Notification providers need to be registered via [`Self::add_notification_provider`],
+    /// so that the server knows that they can send notifications.
+    #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]
     pub fn add_component<C: Component>(&self) -> &Self {
         self.0.write().add_component::<C>(self.provider_handle::<C>());
         self
     }
+    /// Removes a component (& dependant components) from the server.
+    #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]
     pub fn remove_component<C: Component>(&self) -> &Self {
         self.0.write().remove_component(TypeId::of::<C>());
         self
     }
+    /// Adds a new [`NotificationProvider`] to the server.
+    #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]
     pub fn add_notification_provider<P: NotificationProvider>(&self) -> &Self {
         self.0.write().add_notification_provider::<P>(self.provider_handle::<P>());
         self
     }
+    /// reload the config from the config file.
+    #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]
     pub fn reload_config(&self) -> &Self {
         self.0.write().reload_config();
         self
     }
+    /// retrieves a reference to a component from the server and applies the map function to it.
+    ///
+    /// # Note
+    /// This is this way because the actual server is behind an [`Arc`] reference and if we didn't
+    /// do it this way there would be lifetime issues.
+    // NOTE: I could build a custom struct that houses the reference to the component & the lock.
+    //       Might do that in the future.
     pub fn component_map<C: Component, F: FnOnce(Option<&C>) -> V, V>(&self, func: F) -> V {
         func(self.0.read().get_component())
     }
+    /// retrieves a mutable reference to a component from the server and applies the map function to it.
+    ///
+    /// # Note
+    /// This is this way because the actual server is behind an [`Arc`] reference and if we didn't
+    /// do it this way there would be lifetime issues.
+    // NOTE: I could build a custom struct that houses the reference to the component & the lock.
+    //       Might do that in the future.
     pub fn component_map_mut<C: Component, F: FnOnce(Option<&mut C>) -> V, V>(&self, func: F) -> V {
         func(self.0.write().get_component_mut())
     }
     fn provider_handle<P: Component>(&self) -> ComponentHandle {
         ComponentHandle::new::<P>(self.0.clone())
     }
+    /// Returns a copy of all elements and their states.
+    #[must_use]
     pub fn get_states(&self) -> HashMap<String, State> {
         self.0.read().get_states()
     }

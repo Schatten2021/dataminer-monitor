@@ -29,12 +29,13 @@ impl AppState {
             self.0.remove(&message.element_id);
             return;
         }
+        #[expect(clippy::single_match_else, reason="is just more readable this way.")]
         let element = match self.0.get_mut(&message.element_id) {
             Some(e) => e,
             None => {
                 self.0.insert(message.element_id.clone(), Element {
                     online: false,
-                    attributes: Default::default(),
+                    attributes: HashMap::new(),
                 });
                 self.0.get_mut(&message.element_id).unwrap()
             }

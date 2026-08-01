@@ -1,14 +1,17 @@
 use axum::extract::Request;
 use utils::Never;
 use server::{Component, ComponentHandle, RequestHandle};
+use crate::Api;
 
+/// provides a frontend for the status server.
 pub struct Frontend;
 impl Component for Frontend {
     const ID: &'static str = "frontend";
     type Config = ();
     type ConfigError = Never;
 
-    fn init(_: ComponentHandle, (): Self::Config) -> Result<Self, Self::ConfigError> {
+    fn init(handle: ComponentHandle, (): Self::Config) -> Result<Self, Self::ConfigError> {
+        handle.add_notification_provider_dependency::<Api>();
         Ok(Self)
     }
 

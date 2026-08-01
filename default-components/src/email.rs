@@ -20,12 +20,12 @@ impl Default for Config {
     fn default() -> Self {
         error!("No information provided for EmailNotificationProvider. Please add the required config to the config file.");
         Self {
-            address: Default::default(),
-            password: Default::default(),
-            server: Default::default(),
+            address: String::new(),
+            password: String::new(),
+            server: String::new(),
             name: default_name(),
-            subscribers: Default::default(),
-            filter: Default::default(),
+            subscribers: Vec::new(),
+            filter: Filter::default(),
         }
     }
 }
@@ -52,11 +52,12 @@ impl Subscriber {
     fn allows(&self, notification: &Notification) -> bool {
         match self {
             Subscriber::Custom { filter, .. } => filter.allows(notification),
-            _ => true,
+            Subscriber::Default(_) => true,
         }
     }
 }
 #[derive(Clone, Debug)]
+/// [`NotificationProvider`] to send notifications via E-Mail.
 pub struct EmailNotificationProvider {
     config: Config,
     credentials: Credentials,
@@ -86,11 +87,11 @@ impl NotificationProvider for EmailNotificationProvider {
         let (subject, body) = match &notification.reason {
             NotificationReason::OnlineStatusChanged(true) => (
                 format!("{} went online", notification.element_id),
-                format!(r#"<h1> <code>{}</code> just went online</h1>Everything is fine"#, notification.element_id)
+                format!(r"<h1> <code>{}</code> just went online</h1>Everything is fine", notification.element_id)
             ),
             NotificationReason::OnlineStatusChanged(false) => (
                 format!("{} went offline", notification.element_id),
-                format!(r#"<h1><code>{}</code> just went offline!</h1> Go check up on it!"#, notification.element_id)
+                format!(r"<h1><code>{}</code> just went offline!</h1> Go check up on it!", notification.element_id)
             ),
             NotificationReason::AttributeCreated(attr, val) => (
                 format!("{} just got the attribute {}", notification.element_id, attr),
@@ -115,7 +116,7 @@ impl NotificationProvider for EmailNotificationProvider {
         };
         let cloned = self.clone();
         tokio::task::spawn(async move {
-            if let Err(e) = cloned.send_message(subject, body, notification) {
+            if let Err(e) = cloned.send_message(subject, &body, &notification) {
                 error!("error sending E-Mail: {e}");
             }
         });
@@ -124,8 +125,8 @@ impl NotificationProvider for EmailNotificationProvider {
 impl EmailNotificationProvider {
     fn send_message(self,
                     subject: String,
-                    body: String,
-                    notification: Notification) -> Result<(), Box<dyn std::error::Error>> {
+                    body: &str,
+                    notification: &Notification) -> Result<(), Box<dyn std::error::Error>> {
         use lettre::Transport;
         trace!("sending email: {:?}", body);
         let mailer = lettre::transport::smtp::SmtpTransport::relay(&self.config.server)?
@@ -136,11 +137,11 @@ impl EmailNotificationProvider {
             .subject(subject)
             .header(lettre::message::header::ContentType::TEXT_HTML);
         for target in self.config.subscribers {
-            if !target.allows(&notification) { continue; }
+            if !target.allows(notification) { continue; }
             trace!("sending email to {}", target.get_email());
             mailer.send(&builder_preset.clone()
                 .to(target.get_email().parse()?)
-                .body(body.clone())?)?;
+                .body(body.to_string())?)?;
         }
         Ok(())
     }

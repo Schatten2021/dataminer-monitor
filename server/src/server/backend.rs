@@ -65,7 +65,7 @@ unsafe fn try_handle_request<C: Component>(this: &Untyped, request: axum::extrac
 unsafe fn notify_provider<P: NotificationProvider>(this: &Untyped, notification: Notification) {
     // SAFETY: The correctness of the type is guaranteed by the caller.
     unsafe {
-        this.read::<P>().notify(notification)
+        this.read::<P>().notify(notification);
     }
 }
 fn read_config(path: impl AsRef<Path>) -> Config {
@@ -103,7 +103,7 @@ impl Server {
             notify: notify_provider::<P>
         };
         self.components.additional_data_mut::<P>()
-            .expect("just inserted it").notification_provider_info = Some(info)
+            .expect("just inserted it").notification_provider_info = Some(info);
     }
     pub(crate) fn add_component_dependency<C: Component>(&mut self, handle: ComponentHandle, dependant: TypeId) {
         if self.loaded_config.ignored.contains(C::ID) {
@@ -123,7 +123,7 @@ impl Server {
             notify: notify_provider::<P>
         };
         self.components.additional_data_mut::<P>()
-            .expect("just inserted it").notification_provider_info = Some(info)
+            .expect("just inserted it").notification_provider_info = Some(info);
     }
     pub(crate) fn add_component<C: Component>(&mut self, handle: ComponentHandle) {
         use serde::Deserialize;
@@ -202,7 +202,7 @@ impl Server {
                 // SAFETY: That the type is the same is guaranteed by the creation of 
                 //         `data.configure` and `TypeMap::entries_mut`.
                 unsafe {
-                    (data.reconfigure)(component, config)
+                    (data.reconfigure)(component, config);
                 }
                 None
             }).collect::<Vec<_>>() {
@@ -213,6 +213,7 @@ impl Server {
 // State changes
 impl Server {
     pub(crate) fn attribute_change(&mut self, component_id: &'static str, element_id: &str, attribute_id: &str, value: AttributeValue) {
+        #[expect(clippy::single_match_else, reason="using a match here actually makes it more readable.")]
         let state = match self.states.get_mut(element_id) {
             Some(state) => state,
             None => {
@@ -235,7 +236,7 @@ impl Server {
                 None => NotificationReason::AttributeCreated(attribute_id.to_string(), value),
             }
         );
-        self.notify(notification)
+        self.notify(notification);
     }
     pub(crate) fn get_attribute(&self, element_id: &str, attribute_id: &str) -> Option<AttributeValue> {
         self.states.get(element_id)?
@@ -248,37 +249,35 @@ impl Server {
                 component_id.to_string(),
                 element_id.to_string(),
                 NotificationReason::DeleteAttribute(attribute_id.to_string(), old))
-            )
+            );
         }
     }
     pub(crate) fn online_status_changed(&mut self, component_id: &'static str, element_id: &str, new_status: bool) {
-        match self.states.get_mut(element_id) {
-            Some(state) => {
-                if state.online == new_status {
-                    warn!("called online_status_changed without changing the online status; ignoring");
-                    return;
-                }
-                state.online = new_status;
-                self.notify(Notification::new(
-                    component_id.to_string(),
-                    element_id.to_string(),
-                    NotificationReason::OnlineStatusChanged(new_status)
-                ));
-            },
-            None => {
-                self.states.insert(element_id.to_string(), State::with_online(new_status));
-                self.notify(Notification::new(
-                    component_id.to_string(),
-                    element_id.to_string(),
-                    NotificationReason::NewElement(new_status),
-                ))
+        if let Some(state) = self.states.get_mut(element_id) {
+            if state.online == new_status {
+                warn!("called online_status_changed without changing the online status; ignoring");
+                return;
             }
+            state.online = new_status;
+            self.notify(Notification::new(
+                component_id.to_string(),
+                element_id.to_string(),
+                NotificationReason::OnlineStatusChanged(new_status)
+            ));
+        } else {
+            self.states.insert(element_id.to_string(), State::with_online(new_status));
+            self.notify(Notification::new(
+                component_id.to_string(),
+                element_id.to_string(),
+                NotificationReason::NewElement(new_status),
+            ));
         }
     }
     pub(crate) fn get_status(&self, element_id: &str) -> Option<bool> {
         self.states.get(element_id)
             .map(|state| state.online)
     }
+    #[expect(clippy::needless_pass_by_value, reason="_semantically_ we are passing ownership to the function.")]
     pub(crate) fn notify(&self, notification: Notification) {
         trace!("sending out notification: {notification:?}");
         self.components.entries()
@@ -289,7 +288,7 @@ impl Server {
                 // SAFETY: The correctness of the type is guaranteed by the creation of
                 //         `NotificationProviderInfo::notify` and `TypeMap::entries`.
                 unsafe {
-                    (data.notify)(component, notification.clone())
+                    (data.notify)(component, notification.clone());
                 }
             });
     }
@@ -301,6 +300,7 @@ impl Server {
     #[expect(clippy::result_large_err, reason="The error here isn't actually an error, but just the request if we fail to parse it.")]
     pub(crate) fn try_handle_request(&self, mut request: axum::extract::Request) -> Result<crate::component::RequestHandle, axum::extract::Request> {
         for (info, component) in self.components.entries() {
+            // SAFETY: The correctness of the types is ensured by the creation of `try_handle_request` and `components.entries`
             request = match unsafe { (info.try_handle_request)(component, request) } {
                 Ok(handle) => return Ok(handle),
                 Err(r) => r,

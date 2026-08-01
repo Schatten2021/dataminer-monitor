@@ -28,6 +28,7 @@ impl Default for Config {
         }
     }
 }
+/// Component for keeping track of the status of websites.
 pub struct WebsiteStatuse {
     config: HashMap<String, Config>,
     task_handles: HashMap<String, tokio::task::JoinHandle<()>>,
@@ -62,9 +63,7 @@ impl server::Component for WebsiteStatuse {
             self.config.remove(&id);
         }
         for (id, new_config) in config.into_iter()
-            .filter(|(id, new_conf)| self.config.get(id)
-                .map(|old_conf| old_conf != new_conf)
-                .unwrap_or(true))
+            .filter(|(id, new_conf)| self.config.get(id) != Some(new_conf))
             .collect::<Vec<_>>()
         {
             let handle = self.state.clone();
@@ -93,9 +92,9 @@ fn spawn_listen_task(id: String, config: Config, state: ComponentHandle) -> toki
             }
             if new_status {
                 trace!("successfully requested {}", config.url);
-                state.change_attribute(&id, LAST_SEEN_ID, AttributeValue::Date(chrono::Utc::now()))
+                state.change_attribute(&id, LAST_SEEN_ID, AttributeValue::Date(chrono::Utc::now()));
             } else {
-                trace!("failed to request {}", config.url)
+                trace!("failed to request {}", config.url);
             }
         }
     })

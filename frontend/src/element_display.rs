@@ -45,7 +45,7 @@ fn render_attr_value(value: &AttributeValue) -> String {
             .collect::<Vec<_>>()
             .join(", ")),
         AttributeValue::Number(v) => format!("{v}"),
-        AttributeValue::String(v) => v.to_string(),
+        AttributeValue::String(v) => v.clone(),
         AttributeValue::Enum(v) => format!("{}({})", v.variant, render_attr_value(&v.value)),
         AttributeValue::Map(map) => format!("{{{}}}", map.iter()
             .map(|(k, v)| format!("{}: {}", render_attr_value(k), render_attr_value(v)))

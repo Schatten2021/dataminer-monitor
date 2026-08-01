@@ -12,6 +12,10 @@ pub struct Config {
     timeout: chrono::Duration,
 }
 
+/// [`Component`] for keeping track of dataminers.
+///
+/// Dataminers are expected to repeatedly ping "/miner/ping?id={miner-id}" to assert that they are,
+/// in fact, still running.
 pub struct DataminerStatus {
     config: HashMap<String, Config>,
     timeout_handles: HashMap<String, tokio::task::JoinHandle<()>>,
@@ -45,9 +49,7 @@ impl Component for DataminerStatus {
             self.config.remove(&id);
         }
         for (id, new_config) in config.into_iter()
-            .filter(|(id, new_conf)| self.config.get(id)
-                .map(|old_conf| old_conf != new_conf)
-                .unwrap_or(true))
+            .filter(|(id, new_conf)| self.config.get(id) != Some(new_conf))
             .collect::<Vec<_>>()
         {
             let handle = self.server.clone();
@@ -80,25 +82,25 @@ fn spawn_timeout_task(id: String, config: Config, handle: ComponentHandle) -> to
     ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
     tokio::spawn(async move {
+        let config = config;
         loop {
             ticker.tick().await;
-            let last_seen = match handle.get_attribute(&id, LAST_SEEN_ID) {
-                Some(AttributeValue::Date(dt)) => Some(dt),
-                _ => {
-                    trace!("dataminer never seen before");
-                    None
-                },
+            let last_seen = if let Some(AttributeValue::Date(dt)) = handle.get_attribute(&id, LAST_SEEN_ID) {
+                Some(dt)
+            } else {
+                trace!("dataminer never seen before");
+                None
             };
             let now = chrono::Utc::now();
             let now_std = std::time::Instant::now();
-            let is_online = last_seen.map(|timestamp| (timestamp - now) > config.timeout)
-                .unwrap_or(false);
+            let is_online = last_seen.is_some_and(|timestamp| (timestamp - now) > config.timeout);
             if handle.get_online_state(&id) != Some(is_online) {
                 info!("miner {id} changed to {}", if is_online { "online" } else { "offline" });
                 handle.change_online_state(&id, is_online);
                 if let Some(last_ping) = last_seen {
                     let diff = now - last_ping;
                     let diff = diff.to_std().expect("last ping somehow after now?");
+                    #[expect(clippy::unchecked_time_subtraction, reason="it is very unlikely that `diff` will be large enough to underflow the Instant.")]
                     let last_ping_std = now_std - diff;
                    ticker.reset_at(tokio::time::Instant::from_std(last_ping_std + config.timeout.to_std().unwrap()));
                 }

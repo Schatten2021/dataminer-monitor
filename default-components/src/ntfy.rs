@@ -76,6 +76,7 @@ impl From<&Config> for NotificationBody {
         }
     }
 }
+/// [`NotificationProvider`] to send notifications via [NTFY](https://ntfy.sh).
 pub struct NtfyNotificationProvider {
     config: Vec<Config>,
 }
@@ -122,32 +123,32 @@ impl server::NotificationProvider for NtfyNotificationProvider {
             ("attr_new_value".to_string(), match &notification.reason {
                 NotificationReason::AttributeCreated(_, val) |
                 NotificationReason::AttributeChanged(_, _, val)=> val.to_string(),
-                _ => "".to_string()
+                _ => String::new()
             }),
             ("attr_old_value".to_string(), match &notification.reason {
                 NotificationReason::AttributeChanged(_, val, _) |
                 NotificationReason::DeleteAttribute(_, val) => val.to_string(),
-                _ => "".to_string(),
+                _ => String::new(),
             }),
             ("attr_id".to_string(), match &notification.reason {
                 NotificationReason::AttributeCreated(id, _) |
                 NotificationReason::AttributeChanged(id, _, _) |
-                NotificationReason::DeleteAttribute(id, _) => id.to_string(),
-                _ => "".to_string(),
+                NotificationReason::DeleteAttribute(id, _) => id.clone(),
+                _ => String::new(),
             }),
             ("status_new".to_string(), match &notification.reason {
                 NotificationReason::NewElement(true) |
                 NotificationReason::OnlineStatusChanged(true) => "online".to_string(),
                 NotificationReason::NewElement(false) |
                 NotificationReason::OnlineStatusChanged(false) => "offline".to_string(),
-                _ => "".to_string(),
+                _ => String::new(),
             }),
             ("status_old".to_string(), match &notification.reason {
                 NotificationReason::NewElement(true) |
                 NotificationReason::OnlineStatusChanged(true) => "offline".to_string(),
                 NotificationReason::NewElement(false) |
                 NotificationReason::OnlineStatusChanged(false) => "online".to_string(),
-                _ => "".to_string(),
+                _ => String::new(),
             }),
         ]);
         debug!("sending ntfy notification with format values: {:?}", format_values);
