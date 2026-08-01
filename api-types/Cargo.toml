@@ -3,5 +3,10 @@ name = "api-types"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+server-support = ["dep:server"]
+
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
+chrono = { workspace = true, features = ["serde"] }
+server = { workspace = true, optional = true }

@@ -12,7 +12,6 @@ pub struct Filter {
         alias="element", alias="elements", alias="element-id", alias="element_id")]
     entity: SingleFilter<String>,
 
-    #[serde(default)]
     #[serde(alias="state-change",
         alias="state", alias="states",
         alias="status", alias="statuses", alias="stati",
@@ -29,9 +28,13 @@ impl Filter {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct SingleFilter<ItemType> {
-    #[serde(alias="allow", alias="allowed", alias="enable", alias="enabled", alias="whitelisted")]
+    #[serde(alias="allow", alias="allowed", alias="enable", alias="enabled", alias="whitelisted",
+        alias="accept", alias="accepts", alias="accepted")]
+    #[serde(default="Vec::new")]
     whitelist: Vec<ItemType>,
-    #[serde(alias="deny", alias="denied", alias="disable", alias="disabled", alias="blacklisted")]
+    #[serde(alias="deny", alias="denied", alias="denies", alias="disable", alias="disabled", alias="blacklisted",
+        alias="disallow", alias="disallowed", alias="disallows")]
+    #[serde(default="Vec::new")]
     blacklist: Vec<ItemType>,
 }
 impl<T> Default for SingleFilter<T> {
@@ -92,12 +95,12 @@ impl Filtering<NotificationReason> for StateChange {
         match self {
             Self::OnlineStateChange(None) => matches!(reason,
                 NotificationReason::OnlineStatusChanged(_) |
-                NotificationReason::NewElement(_, _)),
+                NotificationReason::NewElement(_)),
             Self::OnlineStateChange(Some(status_filter)) => matches!(reason,
                 NotificationReason::OnlineStatusChanged(new) |
-                NotificationReason::NewElement(_, new)
+                NotificationReason::NewElement(new)
                 if new == status_filter),
-            Self::CreateEntity => matches!(reason, NotificationReason::NewElement(_, _)),
+            Self::CreateEntity => matches!(reason, NotificationReason::NewElement(_)),
             Self::AttributeChange(change) => match reason {
                 NotificationReason::AttributeCreated(id, _) |
                 NotificationReason::AttributeChanged(id, _, _) |

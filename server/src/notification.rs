@@ -21,5 +21,5 @@ pub enum NotificationReason {
     AttributeChanged(String, AttributeValue, AttributeValue),
     DeleteAttribute(String, AttributeValue),
     /// (id, online)
-    NewElement(String, bool),
+    NewElement(bool),
 }

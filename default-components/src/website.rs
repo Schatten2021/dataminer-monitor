@@ -76,15 +76,22 @@ fn spawn_listen_task(id: String, config: Config, state: ComponentHandle) -> toki
     let mut ticker = tokio::time::interval(config.interval.to_std().expect("couldn't convert interval to std interval"));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
     tokio::task::spawn(async move {
+        let name = config.name.clone().unwrap_or_else(|| id.clone());
         let client = reqwest::Client::new();
         loop {
             ticker.tick().await;
             let new_status = matches!(request_website(&client, &config).await, Ok(true));
-            if Some(new_status) != state.get_online_state(&id) {
+            let old_state = state.get_online_state(&id);
+            trace!("old state: {old_state:?}; new_state: {new_status}");
+            if Some(new_status) != old_state {
+                info!("webserver {} has changed", name);
                 state.change_online_state(&id, new_status);
             }
             if new_status {
+                trace!("successfully requested {}", config.url);
                 state.change_attribute(&id, "last_seen", AttributeValue::Date(chrono::Utc::now()))
+            } else {
+                trace!("failed to request {}", config.url)
             }
         }
     })

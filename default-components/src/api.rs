@@ -135,7 +135,7 @@ impl server::Component for Api {
             let _ = request;
             let (code, json) = match path {
                 "/" => ok!("Welcome to the API!"),
-                "/current" => ok!(state.get_states()),
+                "/current" => ok!(api_types::States::from(state.get_states())),
                 // TODO: add routes for requesting selected elements/stati/etc.
                 "/ws" | "/websocket" | "/socket" => {
                     use axum::extract::{
@@ -175,7 +175,7 @@ impl server::NotificationProvider for Api {
     fn notify(&self, notification: Notification) {
         use axum::extract::ws::{Message, Utf8Bytes};
         let sockets = self.websockets.clone();
-        let message: Utf8Bytes = match serde_json::to_string(&notification) {
+        let message: Utf8Bytes = match serde_json::to_string(&api_types::websocket::Message::from(notification)) {
             Ok(v) => v,
             Err(e) => {
                 error!("couldn't serialize notification: {e}");

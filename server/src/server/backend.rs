@@ -208,7 +208,7 @@ impl Server {
                 self.notify(Notification::new(
                     component_id.to_string(),
                     element_id.to_string(),
-                    NotificationReason::NewElement(element_id.to_string(), false)
+                    NotificationReason::NewElement(false)
                 ));
                 self.states.get_mut(element_id)
                     .expect("just inserted, but not present?")
@@ -244,7 +244,7 @@ impl Server {
                 self.notify(Notification::new(
                     component_id.to_string(),
                     element_id.to_string(),
-                    NotificationReason::NewElement(element_id.to_string(), new_status),
+                    NotificationReason::NewElement(new_status),
                 ))
             }
         }

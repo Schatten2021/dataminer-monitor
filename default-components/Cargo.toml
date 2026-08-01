@@ -5,7 +5,7 @@ edition = "2024"
 
 
 [dependencies]
-api-types.workspace = true
+api-types = { workspace = true, features = ["server-support"] }
 axum = { workspace = true, features = ["ws"] }
 chrono.workspace = true
 serde.workspace = true
