@@ -14,10 +14,6 @@ pub struct ComponentHandle {
     type_id: TypeId,
 }
 impl ComponentHandle {
-    pub fn attribute_change(self, element_id: &str, attribute_id: &str, value: AttributeValue) {
-        self.backend.write()
-            .attribute_change(self.id, element_id, attribute_id, value);
-    }
     pub(super) fn new<P: Component>(backend: Arc<RwLock<Server>>) -> Self {
         Self { 
             backend, 
@@ -57,5 +53,8 @@ impl ComponentHandle {
     }
     pub fn get_attribute(&self, element_id: &str, attribute_id: &str) -> Option<AttributeValue> {
         self.backend.read().get_attribute(element_id, attribute_id)
+    }
+    pub fn delete_attribute(&self, element_id: &str, attribute_id: &str) {
+        self.backend.write().delete_attribute(element_id, attribute_id, self.id)
     }
 }

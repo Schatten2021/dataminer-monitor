@@ -11,7 +11,8 @@ async fn main() {
     server.add_component::<default_components::WebsiteStatuse>()
         .add_notification_provider::<default_components::Api>()
         .add_component::<default_components::Frontend>()
-        .add_component::<default_components::DataminerStatus>();
+        .add_component::<default_components::DataminerStatus>()
+        .add_component::<default_components::MinecraftStatus>();
     let router = axum::Router::new()
         .route("/", any(server.clone()))
         .route("/{*any}", any(server.clone()));

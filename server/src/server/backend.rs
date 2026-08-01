@@ -229,6 +229,16 @@ impl Server {
         self.states.get(element_id)?
             .attributes.get(attribute_id).cloned()
     }
+    pub(crate) fn delete_attribute(&mut self, element_id: &str, attribute_id: &str, component_id: &str) {
+        let Some(element) = self.states.get_mut(element_id) else { return; };
+        if let Some(old) = element.attributes.remove(attribute_id) {
+            self.notify(Notification::new(
+                component_id.to_string(), 
+                element_id.to_string(), 
+                NotificationReason::DeleteAttribute(attribute_id.to_string(), old))
+            )
+        }
+    }
     pub(crate) fn online_status_changed(&mut self, component_id: &'static str, element_id: &str, new_status: bool) {
         match self.states.get_mut(element_id) {
             Some(state) => {
