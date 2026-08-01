@@ -6,7 +6,6 @@ resolver = "3"
 tracing = "0.1"
 axum = "0.8"
 tokio = "1"
-thiserror = "2"
 serde = "1"
 utils = { version = "0.4", registry = "kellnr"}
 parking_lot = "0.12"
@@ -19,7 +18,7 @@ api-types = { path = "api-types" }
 
 [package]
 name = "status-server"
-version = "2.0.0"
+version = "3.0.0"
 edition = "2024"
 publish = ["kellnr"]
 
@@ -30,3 +29,4 @@ tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
 server.workspace = true
 axum.workspace = true
 default-components.workspace = true
+clap = { version = "4.6", features = ["derive"] }
