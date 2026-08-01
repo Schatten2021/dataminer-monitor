@@ -93,6 +93,10 @@ fn read_config(path: impl AsRef<Path>) -> Config {
 // component management
 impl Server {
     pub(crate) fn add_notification_provider_dependency<P: NotificationProvider>(&mut self, handle: ComponentHandle, dependant: TypeId) {
+        if self.loaded_config.ignored.contains(P::ID) {
+            error!("dependency {} cannot be satisfied as it is set to be ignored.", P::ID);
+            return;
+        }
         self.add_component_dependency::<P>(handle, dependant);
         let info = NotificationProviderInfo {
             notify: notify_provider::<P>
@@ -101,6 +105,10 @@ impl Server {
             .expect("just inserted it").notification_provider_info = Some(info)
     }
     pub(crate) fn add_component_dependency<C: Component>(&mut self, handle: ComponentHandle, dependant: TypeId) {
+        if self.loaded_config.ignored.contains(C::ID) {
+            error!("dependency {} cannot be satisfied as it is set to be ignored.", C::ID);
+            return;
+        }
         if !self.components.contains_key::<C>() {
             self.add_component::<C>(handle);
         }
@@ -108,6 +116,7 @@ impl Server {
             .required_by.insert(dependant);
     }
     pub(crate) fn add_notification_provider<P: NotificationProvider>(&mut self, handle: ComponentHandle) {
+        if self.loaded_config.ignored.contains(P::ID) { return; }
         self.add_component::<P>(handle);
         let info = NotificationProviderInfo {
             notify: notify_provider::<P>
@@ -117,6 +126,8 @@ impl Server {
     }
     pub(crate) fn add_component<C: Component>(&mut self, handle: ComponentHandle) {
         use serde::Deserialize;
+
+        if self.loaded_config.ignored.contains(C::ID) { return; }
         
         if self.components.contains_key::<C>() {
             debug!("called `add_component` with already registered component! Ignoring.");
@@ -233,8 +244,8 @@ impl Server {
         let Some(element) = self.states.get_mut(element_id) else { return; };
         if let Some(old) = element.attributes.remove(attribute_id) {
             self.notify(Notification::new(
-                component_id.to_string(), 
-                element_id.to_string(), 
+                component_id.to_string(),
+                element_id.to_string(),
                 NotificationReason::DeleteAttribute(attribute_id.to_string(), old))
             )
         }

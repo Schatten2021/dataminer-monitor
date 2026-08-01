@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use axum::extract::Request;
-use tokio::time::{timeout, MissedTickBehavior};
+use tokio::time::MissedTickBehavior;
 use utils::Never;
 use server::{AttributeValue, Component, ComponentHandle, RequestHandle};
 
