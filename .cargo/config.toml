@@ -1,2 +1,3 @@
+[registries.kellnr]
 index = "sparse+https://kellnr.fms.nrw/api/v1/crates/"
 credential-provider = ["cargo:token"]
