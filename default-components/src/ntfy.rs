@@ -1,0 +1,180 @@
+use std::collections::HashMap;
+use utils::Never;
+use server::{ComponentHandle, Notification, NotificationReason};
+use crate::filters::Filter;
+
+fn default_message() -> String {
+    "{element_id} {reason_long}".to_string()
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Default, Debug)]
+pub struct Config {
+    base: String,
+    topic: String,
+    title: Option<String>,
+    #[serde(default="default_message")]
+    message: String,
+    #[serde(default)]
+    tags: Vec<String>,
+    priority: Option<u8>,
+    click: Option<url::Url>,
+    attach: Option<url::Url>,
+    markdown: Option<bool>,
+    icon: Option<url::Url>,
+    filename: Option<String>,
+    delay: Option<String>,
+    email: Option<String>,
+    call: Option<String>,
+    #[serde(default)]
+    filter: Filter,
+    auth_token: Option<String>,
+}
+#[derive(serde::Serialize, Clone, Debug)]
+struct NotificationBody {
+    topic: String,
+    #[serde(skip_serializing_if="Option::is_none")]
+    message: Option<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    title: Option<String>,
+    #[serde(skip_serializing_if="Vec::is_empty")]
+    tags: Vec<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    priority: Option<u8>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    click: Option<url::Url>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    attach: Option<url::Url>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    markdown: Option<bool>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    icon: Option<url::Url>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    filename: Option<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    delay: Option<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    email: Option<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    call: Option<String>,
+}
+impl From<&Config> for NotificationBody {
+    fn from(value: &Config) -> Self {
+        Self {
+            topic: value.topic.clone(),
+            message: None,
+            title: value.title.clone(),
+            tags: value.tags.clone(),
+            priority: value.priority,
+            click: value.click.clone(),
+            attach: value.attach.clone(),
+            markdown: value.markdown,
+            icon: value.icon.clone(),
+            filename: value.filename.clone(),
+            delay: value.delay.clone(),
+            email: value.email.clone(),
+            call: value.call.clone(),
+        }
+    }
+}
+/// [`NotificationProvider`] to send notifications via [NTFY](https://ntfy.sh).
+pub struct NtfyNotificationProvider {
+    config: Vec<Config>,
+}
+impl server::Component for NtfyNotificationProvider {
+    const ID: &'static str = "ntfy";
+    type Config = Vec<Config>;
+    type ConfigError = Never;
+
+    fn init(_: ComponentHandle, config: Self::Config) -> Result<Self, Self::ConfigError> {
+        Ok(Self {
+            config,
+        })
+    }
+
+    fn reconfigure(&mut self, config: Self::Config) -> Result<(), Self::ConfigError> {
+        self.config = config;
+        Ok(())
+    }
+}
+
+impl server::NotificationProvider for NtfyNotificationProvider {
+    fn notify(&self, notification: Notification) {
+        let format_values = HashMap::from([
+            ("component_id".to_string(), notification.component_id.clone()),
+            ("element_id".to_string(), notification.element_id.clone()),
+            ("reason_short".to_string(), match &notification.reason {
+                NotificationReason::OnlineStatusChanged(true) => "went online".to_string(),
+                NotificationReason::OnlineStatusChanged(false) => "went offline".to_string(),
+                NotificationReason::AttributeCreated(id, _) => format!("got attribute {id}"),
+                NotificationReason::AttributeChanged(id, _, _) => format!("attribute {id} changed"),
+                NotificationReason::DeleteAttribute(id, _) => format!("attribute {id} got deleted"),
+                NotificationReason::NewElement(true) => "created (online)".to_string(),
+                NotificationReason::NewElement(false) => "created (offline)".to_string(),
+            }),
+            ("reason_long".to_string(), match &notification.reason {
+                NotificationReason::OnlineStatusChanged(true) => "went online".to_string(),
+                NotificationReason::OnlineStatusChanged(false) => "went offline".to_string(),
+                NotificationReason::AttributeCreated(id, val) => format!("attribute {id} got created ({val})"),
+                NotificationReason::AttributeChanged(id, old, new) => format!("attribute {id} got changed ({old} => {new})"),
+                NotificationReason::DeleteAttribute(id, old) => format!("attribute {id} got deleted ({old})"),
+                NotificationReason::NewElement(true) => "got created and went online".to_string(),
+                NotificationReason::NewElement(false) => "got created and went offline".to_string(),
+            }),
+            ("attr_new_value".to_string(), match &notification.reason {
+                NotificationReason::AttributeCreated(_, val) |
+                NotificationReason::AttributeChanged(_, _, val)=> val.to_string(),
+                _ => String::new()
+            }),
+            ("attr_old_value".to_string(), match &notification.reason {
+                NotificationReason::AttributeChanged(_, val, _) |
+                NotificationReason::DeleteAttribute(_, val) => val.to_string(),
+                _ => String::new(),
+            }),
+            ("attr_id".to_string(), match &notification.reason {
+                NotificationReason::AttributeCreated(id, _) |
+                NotificationReason::AttributeChanged(id, _, _) |
+                NotificationReason::DeleteAttribute(id, _) => id.clone(),
+                _ => String::new(),
+            }),
+            ("status_new".to_string(), match &notification.reason {
+                NotificationReason::NewElement(true) |
+                NotificationReason::OnlineStatusChanged(true) => "online".to_string(),
+                NotificationReason::NewElement(false) |
+                NotificationReason::OnlineStatusChanged(false) => "offline".to_string(),
+                _ => String::new(),
+            }),
+            ("status_old".to_string(), match &notification.reason {
+                NotificationReason::NewElement(true) |
+                NotificationReason::OnlineStatusChanged(true) => "offline".to_string(),
+                NotificationReason::NewElement(false) |
+                NotificationReason::OnlineStatusChanged(false) => "online".to_string(),
+                _ => String::new(),
+            }),
+        ]);
+        debug!("sending ntfy notification with format values: {:?}", format_values);
+        let client = reqwest::Client::new();
+        for config in &self.config {
+            use strfmt::Format;
+            if !config.filter.allows(&notification) {
+                trace!("message filtered out through config");
+                continue;
+            }
+            debug!("sending ntfy notification to {}", config.base);
+            let title = config.title.as_ref().map(|t| {
+                t.format(&format_values).unwrap_or_else(|_| t.clone())
+            });
+            let message = config.message.format(&format_values).unwrap_or_else(|_| config.message.clone());
+
+            let mut body = NotificationBody::from(config);
+            body.message = Some(message.clone());
+            body.title = title;
+            trace!("finished ntfy notification: {:?}", body);
+            let mut request = client.post(&config.base)
+                .json(&body);
+            if let Some(token) = &config.auth_token {
+                request = request.bearer_auth(token);
+            }
+            tokio::spawn(request.send());
+        }
+    }
+}

@@ -1,30 +1,70 @@
-// mod state;
-// mod config;
-// mod routes;
-// mod notifications;
+#![doc=include_str!("../README.md")]
 
-fn init_state() -> Result<state_management::State, ()> {
-    #[cfg(debug_assertions)]
-    rocket::log::private::set_max_level(rocket::log::private::LevelFilter::Trace);
 
-    let state = state_management::State::default();
-    #[cfg(feature = "dataminer-status-source")]
-    state.register_status_provider::<default_providers::status_providers::DataminerStatusProvider>()?;
-    #[cfg(feature = "server-status-source")]
-    state.register_status_provider::<default_providers::status_providers::ServerStatusProvider>()?;
-    #[cfg(feature = "minecraft-server-status-source")]
-    state.register_status_provider::<default_providers::status_providers::MinecraftStatusProvider>()?;
-    #[cfg(feature = "e-mail-notifications")]
-    state.register_notification_provider::<default_providers::notification_providers::EmailNotificationProvider>()?;
-    #[cfg(feature = "frontend-website")]
-    state.register_notification_provider::<default_providers::notification_providers::WebsiteNotificationProvider>()?;
-    #[cfg(feature = "ntfy-notifications")]
-    state.register_notification_provider::<default_providers::notification_providers::NtfyNotificationProvider>()?;
-    Ok(state)
+#![cfg_attr(not(debug_assertions), deny(missing_docs))]
+#![cfg_attr(debug_assertions, warn(missing_docs))]
+#![warn(clippy::pedantic)]
+#![warn(clippy::complexity, clippy::suspicious, clippy::perf, clippy::style, clippy::allow_attributes_without_reason)]
+#![allow(
+clippy::needless_continue,
+reason = "adding a `continue` often makes the code easier to read."
+)]
+#![allow(
+clippy::missing_errors_doc,
+clippy::doc_markdown,
+reason = "don't want these lints."
+)]
+#![cfg_attr(not(debug_assertions), deny(clippy::undocumented_unsafe_blocks))]
+#![cfg_attr(debug_assertions, warn(clippy::undocumented_unsafe_blocks))]
+
+
+use axum::routing::any;
+use clap::Parser;
+use std::path::PathBuf;
+use tracing::info;
+use tracing::level_filters::LevelFilter;
+
+#[cfg(debug_assertions)]
+const LEVEL: LevelFilter = LevelFilter::TRACE;
+#[cfg(not(debug_assertions))]
+const LEVEL: LevelFilter = LevelFilter::INFO;
+
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::fmt()
+        .with_max_level(LEVEL)
+        .init();
+
+    let args = Args::parse();
+    info!("parsed args: {args:?}");
+
+    let server = server::Server::new(args.config_file);
+    server.add_component::<default_components::WebsiteStatuse>()
+        .add_component::<default_components::Frontend>()
+        .add_component::<default_components::DataminerStatus>()
+        .add_component::<default_components::MinecraftStatus>()
+        .add_notification_provider::<default_components::EmailNotificationProvider>()
+        .add_notification_provider::<default_components::NtfyNotificationProvider>();
+    let router = axum::Router::new()
+        .route("/", any(server.clone()))
+        .route("/{*any}", any(server.clone()));
+    info!("listening on http://{}:{}", args.host, args.port);
+    let listener = tokio::net::TcpListener::bind((args.host, args.port)).await.unwrap();
+    axum::serve(listener, router).await.unwrap();
 }
 
-#[rocket::launch]
-async fn launch() -> _ {
-    rocket::build().mount("/", init_state().unwrap())
-}
+#[derive(clap::Parser, Debug)]
+#[command(version, about="a custom status server")]
+struct Args {
+    /// The path of the config file
+    #[arg(short, long, alias="config", default_value="config.toml")]
+    config_file: PathBuf,
 
+    /// The host (*excluding port*) to bind to.
+    #[arg(short='b', long="bind", alias="host", default_value="0.0.0.0")]
+    host: String,
+
+    /// The port to bind to.
+    #[arg(short, long, default_value_t=5000)]
+    port: u16,
+}
