@@ -21,7 +21,7 @@ components.deny = ["buf"]
 entities.allow = ["foo", "bar"]
 entities.deny = ["suf"]
 changes.allow = [
-    { online = false }, # whitelist any change that results in an element being offline
+    { online = "offline" }, # whitelist any change that results in an element being offline
     { attribute.event="create", attribute.id="foo.bar" } # allow creation of "foo.bar" to pass while deying every other attribute change event
 ]
 changes.deny = [
@@ -33,19 +33,19 @@ changes.deny = [
 ## StateChange
 This is an enum where only one can be selected at a time
 
-| change    | data                                | description                                                                                         |
-|-----------|-------------------------------------|-----------------------------------------------------------------------------------------------------|
-| create    |                                     | Creation of entities                                                                                |
-| attribute | [AttributeChange](#attributechange) | Changes to the Attribute of an entity                                                               |
-| online    | bool (optional)                     | Changes to the online state. If no boolean is supplied all changes to the online state are matched. |
+| change    | data                                       | description                                                                                         |
+|-----------|--------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| create    |                                            | Creation of entities                                                                                |
+| attribute | [AttributeChange](#attributechange)        | Changes to the Attribute of an entity                                                               |
+| online    | Online state (`online`, `offline` or `any) | Changes to the online state. If no boolean is supplied all changes to the online state are matched. |
 
 ### Example
 ```toml
 change1 = "create" # matches the creation of elements
 change2.attribute.event = "any" # matches any change to an attribute
 change3.attribute = { event="create", id="foo.bar" } # matches the creation of the "foo.bar" attribute
-change4 = "online" # matches any online status change
-change5.online = true # matches any online status change where the new status is `online`
+change4.online = "any" # matches any online status change
+change5.online = "offline" # matches any online status change where the new status is `online`
 ```
 
 ## AttributeChange
@@ -65,8 +65,14 @@ change3 = { event="create" } # match all creation events for any attribute
 ```
 
 # Single-Filter
-Each Single-Filter has a whitelist and a blacklist, where the filter allows anything that is *whitelisted* or *not blacklisted*.
+Each Single-Filter has a whitelist and a blacklist.
 
 The whitelist can be identified via any of these names: `allow`, `enable`, `whitelist`, `accept`
 
-The blacklist can be identified via any of these names: `disallow`, `disable`, `blacklist`, `deny` 
+The blacklist can be identified via any of these names: `disallow`, `disable`, `blacklist`, `deny`
+
+You can also set the mode via the `mode` (or `default`) keyword. 
+This can specify the behavior as
+- `explicit-blacklist` (or `allow`): Allows everything by default and only rejects something if it is blacklisted (**and** not in the whitelist)
+- `explicit-whitelist` (or `deny`): Disallows everything by default and only accepts something if it is whitelisted (**and** not in the blacklist)
+

@@ -43,24 +43,43 @@ pub struct SingleFilter<ItemType> {
         alias="accept", alias="accepts", alias="accepted")]
     #[serde(default="Vec::new")]
     /// Whitelist of things to specifically allow.
-    ///
-    /// # Note
-    /// Whitelist overrules [`blacklist`]
-    whitelist: Vec<ItemType>,
+    pub whitelist: Vec<ItemType>,
     #[serde(alias="deny", alias="denied", alias="denies", alias="disable", alias="disabled", alias="blacklisted",
         alias="disallow", alias="disallowed", alias="disallows")]
     #[serde(default="Vec::new")]
     /// Blacklist of things to block.
+    pub blacklist: Vec<ItemType>,
+
+    /// Whether to accept values per default or to reject them.
     ///
-    /// # Note
-    /// [`whitelist`] overrules the Blacklist.
-    blacklist: Vec<ItemType>,
+    /// Changes the behavior of the filter.
+    #[serde(default)]
+    #[serde(alias="default", alias="mode")]
+    pub priority: FilterPriority,
+}
+#[derive(Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+/// What of the filter to prioritize.
+pub enum FilterPriority {
+    /// Prioritizes the whitelist.
+    ///
+    /// This makes it so that the [`SingleFilter`] accepts values by default and only rejects values
+    /// if they are in the blacklist.
+    #[serde(alias="allow", alias="accept", alias="explicit-blacklist", alias="explicit_blacklist")]
+    #[default]
+    Whitelist,
+    /// Prioritizes the blacklist
+    ///
+    /// This makes it so that the [`SingleFilter`] accepts values by default and only accepts values
+    /// if they are in the whitelist.
+    #[serde(alias="disallow", alias="deny", alias="explicit-whitelist", alias="explicit_whitelist")]
+    Blacklist
 }
 impl<T> Default for SingleFilter<T> {
     fn default() -> Self {
         Self {
             whitelist: Vec::new(),
             blacklist: Vec::new(),
+            priority: FilterPriority::Whitelist,
         }
     }
 }
@@ -78,9 +97,23 @@ pub enum StateChange {
 
     #[serde(alias="online", alias="online-state", alias="online_state")]
     /// matches changes to the online state.
-    ///
-    /// If the boolean is unset it matches both `true` and `false`.
-    OnlineStateChange(Option<bool>)
+    OnlineStateChange(OnlineStateChange)
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all="snake_case")]
+/// changes to the online state.
+pub enum OnlineStateChange {
+    /// matches any online state change
+    Any,
+
+    /// when the server went online
+    #[serde(alias="up")]
+    Online,
+
+    /// when the server went offline
+    #[serde(alias="down")]
+    Offline,
 }
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
 /// Matches when attributes of an element change.
@@ -109,7 +142,10 @@ impl<Item> SingleFilter<Item> {
     /// checks whether the filter allows the given input.
     pub fn allows<V>(&self, input: &V) -> bool
     where Item: Filtering<V> {
-        self.whitelisted(input) || !self.blacklisted(input)
+        match self.priority {
+            FilterPriority::Whitelist => self.whitelisted(input) || !self.blacklisted(input),
+            FilterPriority::Blacklist => self.whitelisted(input) && !self.blacklisted(input)
+        }
     }
     /// checks whether the input is whitelisted
     pub fn whitelisted<V>(&self, input: &V) -> bool
@@ -135,16 +171,22 @@ impl<T: Eq> Filtering<T> for T {
         self == value
     }
 }
+impl Filtering<bool> for OnlineStateChange {
+    fn matches(&self, value: &bool) -> bool {
+        matches!((self, value),
+            (Self::Any, _) |
+            (Self::Online, true) |
+            (Self::Offline, false)
+        )
+    }
+}
 impl Filtering<NotificationReason> for StateChange {
     fn matches(&self, reason: &NotificationReason) -> bool {
         match self {
-            Self::OnlineStateChange(None) => matches!(reason,
-                NotificationReason::OnlineStatusChanged(_) |
-                NotificationReason::NewElement(_)),
-            Self::OnlineStateChange(Some(status_filter)) => matches!(reason,
-                NotificationReason::OnlineStatusChanged(new) |
-                NotificationReason::NewElement(new)
-                if new == status_filter),
+            Self::OnlineStateChange(filter)=> matches!(reason,
+                NotificationReason::OnlineStatusChanged(status) |
+                NotificationReason::NewElement(status)
+                if filter.matches(status)),
             Self::CreateEntity => matches!(reason, NotificationReason::NewElement(_)),
             Self::AttributeChange(change) => match reason {
                 NotificationReason::AttributeCreated(id, _) |
