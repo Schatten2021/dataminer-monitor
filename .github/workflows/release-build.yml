@@ -18,7 +18,7 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v7
             - name: Install target toolchains
-              run: rustup target add wasm32-unkown-unknown $TARGET
+              run: rustup target add wasm32-unknown-unknown ${{ env.TARGETS }}
 
             # wasm-bindgen setup
             - name: Install wasm-bindgen-cli
