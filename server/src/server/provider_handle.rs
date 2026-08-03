@@ -103,4 +103,10 @@ impl ComponentHandle {
     pub fn delete_attribute(&self, element_id: &str, attribute_id: &str) {
         self.backend.write().delete_attribute(element_id, attribute_id, self.id);
     }
+    /// reload the config from the config file.
+    #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]
+    pub fn reload_config(&self) -> &Self {
+        self.backend.write().reload_config();
+        self
+    }
 }

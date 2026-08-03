@@ -192,6 +192,7 @@ impl Server {
         }
     }
     pub(crate) fn reload_config(&mut self) {
+        info!("reloading config");
         self.loaded_config = read_config(&self.config_path);
         for to_remove in self.components.entries_mut()
             .filter_map(|(data, component)| {

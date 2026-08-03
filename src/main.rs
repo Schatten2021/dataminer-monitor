@@ -21,6 +21,7 @@ reason = "don't want these lints."
 use axum::routing::any;
 use clap::Parser;
 use std::path::PathBuf;
+use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing::level_filters::LevelFilter;
 
@@ -48,6 +49,12 @@ async fn main() {
     let router = axum::Router::new()
         .route("/", any(server.clone()))
         .route("/{*any}", any(server.clone()));
+    let mut signal = signal(SignalKind::user_defined1()).expect("unable to register SIGUSR1 signal handler");
+    tokio::spawn(async move {
+        while signal.recv().await.is_some() {
+            server.reload_config();
+        }
+    });
     info!("listening on http://{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind((args.host, args.port)).await.unwrap();
     axum::serve(listener, router).await.unwrap();

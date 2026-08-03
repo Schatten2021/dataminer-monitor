@@ -1,5 +1,7 @@
 Status Server
 -------------
+[![Clippy Check](https://github.com/Schatten2021/status-server/actions/workflows/clippy-check.yml/badge.svg)](https://github.com/Schatten2021/status-server/actions/workflows/clippy-check.yml)
+
 This is my own status-monitoring server.
 
 # Structure
@@ -36,6 +38,8 @@ These are mainly:
 - `-V`: prints the version
 
 Any further configuration is done inside of the `config.toml` (or whichever toml file you passed to `-c`).
+
+On Unix platforms you can send `SIGUSR1` signal to the program to trigger a reload of the configuration file.
 
 ## Components
 you can enable and disable [Components](#component) (works at runtime) by putting their ids in the `ignored` config field.
