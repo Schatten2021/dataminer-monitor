@@ -603,11 +603,9 @@ name = "frontend"
 version = "3.0.0"
 dependencies = [
  "api-types",
- "chrono",
  "console_error_panic_hook",
  "futures-util",
  "gloo-net 0.7.0",
- "serde",
  "serde_json",
  "tracing",
  "tracing-wasm",
@@ -2306,7 +2304,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "status-server"
-version = "3.0.0"
+version = "3.0.0-beta.2"
 dependencies = [
  "axum",
  "clap",

@@ -1,0 +1,70 @@
+name: Release
+
+on:
+    workflow_dispatch:
+        inputs:
+            release_notes:
+                description: "Release notes for the GitHub tag"
+                required: true
+                default: ''
+
+jobs:
+    build_and_release:
+        runs-on: ubuntu-latest
+        env:
+          TARGETS: "x86_64-unknown-linux-gnu"
+        steps:
+            # basic setup
+            - name: Checkout code
+              uses: actions/checkout@v4
+            - name: Set up Rust toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  profile: minimal
+                  toolchain: stable
+                  override: true
+
+            # wasm-bindgen setup
+            - name: Install wasm-bindgen-cli
+              run: |
+                  WG_VERSION=$(grep -m 1 'wasm-bindgen' frontend/Cargo.toml | sed -E 's/.*version = "([^"]+)".*/\1/' | sed -E 's/.*wasm-bindgen = "([^"]+)".*/\1/')
+                  cargo install wasm-bindgen-cli --version $WG_VERSION
+
+            # frontend building
+            - name: Build frontend
+              run: |
+                  cargo build -p frontend --target wasm32-unknown-unknown --release
+                  wasm-bindgen --target web --out-dir static/wasm --no-typescript --remove-name-section --remove-producers-section target/wasm32-unknown-unknown/release/frontend.wasm
+
+            # build the backend
+            - name: Build backend
+              id: build_assets
+              run: |
+                FILES=""
+                mkdir binaries
+                for TARGET in $TARGETS; do
+                  echo "=== Building $TARGET"
+                  cargo build --release --target "$TARGET"
+                
+                  ASSET="binaries/status-server-$TARGET"
+                  cp "target/$TARGET/release/status-server" "$ASSET"
+                  FILES += "$ASSET"$'\n'
+                done
+                
+                echo "FILES<<EOF" >> $GITHUB_OUTPUT
+                echo "$FILES" >> $GITHUB_OUTPUT
+                echo "EOF" >> $GITHUB_OUTPUT
+
+            # create the release
+            - name: Get release Version
+              run: |
+                  VERSION=$(grep -m 1 '^version =' Cargo.toml | awk -F\" '{print $2}')
+                  echo "VERSION=$VERSION" >> $GITHUB_ENV
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v3
+              with:
+                  tag_name: v${{ env.VERSION }}
+                  name: v${{ env.VERSION }}
+                  body: ${{ inputs.release_notes }}
+                  generate_release_notes: false
+                  files: ${{ steps.build_assets.outputs.FILES }}
