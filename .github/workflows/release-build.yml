@@ -23,6 +23,8 @@ jobs:
                   profile: minimal
                   toolchain: stable
                   override: true
+            - name: Install target toolchains
+              run: rustup target add wasm32-unkown-unknown $TARGET
 
             # wasm-bindgen setup
             - name: Install wasm-bindgen-cli
