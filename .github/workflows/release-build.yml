@@ -13,6 +13,8 @@ jobs:
         runs-on: ubuntu-latest
         env:
           TARGETS: "x86_64-unknown-linux-gnu"
+        permissions:
+          contents: write
         steps:
             # basic setup
             - name: Checkout code
@@ -39,17 +41,12 @@ jobs:
                 FILES=""
                 mkdir binaries
                 for TARGET in $TARGETS; do
-                  echo "=== Building $TARGET"
+                  echo "=== Building $TARGET ==="
                   cargo build --release --target "$TARGET"
                 
                   ASSET="binaries/status-server-$TARGET"
                   cp "target/$TARGET/release/status-server" "$ASSET"
-                  FILES="$FILES$ASSET"$'\n'
                 done
-                
-                echo "FILES<<EOF" >> $GITHUB_OUTPUT
-                echo "$FILES" >> $GITHUB_OUTPUT
-                echo "EOF" >> $GITHUB_OUTPUT
 
             # create the release
             - name: Get release Version
@@ -63,4 +60,4 @@ jobs:
                   name: v${{ env.VERSION }}
                   body: ${{ inputs.release_notes }}
                   generate_release_notes: false
-                  files: ${{ steps.build_assets.outputs.FILES }}
+                  files: binaries/*
