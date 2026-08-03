@@ -16,13 +16,7 @@ jobs:
         steps:
             # basic setup
             - name: Checkout code
-              uses: actions/checkout@v4
-            - name: Set up Rust toolchain
-              uses: actions-rs/toolchain@v1
-              with:
-                  profile: minimal
-                  toolchain: stable
-                  override: true
+              uses: actions/checkout@v7
             - name: Install target toolchains
               run: rustup target add wasm32-unkown-unknown $TARGET
 
