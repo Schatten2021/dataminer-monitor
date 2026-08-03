@@ -44,7 +44,7 @@ jobs:
                 
                   ASSET="binaries/status-server-$TARGET"
                   cp "target/$TARGET/release/status-server" "$ASSET"
-                  FILES += "$ASSET"$'\n'
+                  FILES="$FILES$ASSET"$'\n'
                 done
                 
                 echo "FILES<<EOF" >> $GITHUB_OUTPUT
