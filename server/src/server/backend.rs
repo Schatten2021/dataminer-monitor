@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use untyped::{TypeMap, Untyped};
 use crate::config::Config;
-use crate::{Component, ComponentHandle};
+use crate::Component;
 use crate::notification::{Notification, NotificationReason};
 use crate::notification_provider::NotificationProvider;
 use crate::state::{AttributeValue, State};
@@ -93,66 +93,49 @@ fn read_config(path: impl AsRef<Path>) -> Config {
 }
 // component management
 impl Server {
-    pub(crate) fn add_notification_provider_dependency<P: NotificationProvider>(&mut self, handle: ComponentHandle, dependant: TypeId) {
+    pub(crate) fn add_notification_provider_dependency<P: NotificationProvider>(&mut self, dependant: TypeId) {
         if self.loaded_config.ignored.contains(P::ID) {
             error!("dependency {} cannot be satisfied as it is set to be ignored.", P::ID);
             return;
         }
-        self.add_component_dependency::<P>(handle, dependant);
+        if !self.components.contains_key::<P>() {
+            error!("component {} not yet loaded!", P::ID)
+        }
+        self.add_component_dependency::<P>(dependant);
         let info = NotificationProviderInfo {
             notify: notify_provider::<P>
         };
         self.components.additional_data_mut::<P>()
             .expect("just inserted it").notification_provider_info = Some(info);
     }
-    pub(crate) fn add_component_dependency<C: Component>(&mut self, handle: ComponentHandle, dependant: TypeId) {
+    pub(crate) fn add_component_dependency<C: Component>(&mut self, dependant: TypeId) {
         if self.loaded_config.ignored.contains(C::ID) {
             error!("dependency {} cannot be satisfied as it is set to be ignored.", C::ID);
             return;
         }
         if !self.components.contains_key::<C>() {
-            self.add_component::<C>(handle);
+            error!("component {} not yet loaded!", C::ID);
+            return;
         }
         self.components.additional_data_mut::<C>().expect("just checked its existance")
             .required_by.insert(dependant);
     }
-    pub(crate) fn add_notification_provider<P: NotificationProvider>(&mut self, handle: ComponentHandle) {
+    pub(crate) fn add_notification_provider<P: NotificationProvider>(&mut self, provider: P) {
         if self.loaded_config.ignored.contains(P::ID) { return; }
-        self.add_component::<P>(handle);
+        self.add_component::<P>(provider);
         let info = NotificationProviderInfo {
             notify: notify_provider::<P>
         };
         self.components.additional_data_mut::<P>()
             .expect("just inserted it").notification_provider_info = Some(info);
     }
-    pub(crate) fn add_component<C: Component>(&mut self, handle: ComponentHandle) {
-        use serde::Deserialize;
-
+    pub(crate) fn add_component<C: Component>(&mut self, component: C) {
         if self.loaded_config.ignored.contains(C::ID) { return; }
         
         if self.components.contains_key::<C>() {
             debug!("called `add_component` with already registered component! Ignoring.");
             return;
         }
-        
-        // load config
-        let config = match self.loaded_config.configs.get(C::ID) {
-            None => C::Config::default(),
-            Some(serialized) => C::Config::deserialize(serialized.clone())
-                .unwrap_or_else(|e| {
-                    error!("couldn't deserialize config for `{}` due to: {e}", C::ID);
-                    C::Config::default()
-                })
-        };
-        
-        // initialize component
-        let component = match C::init(handle, config) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("error initializing component: {e}; skipping...");
-                return;
-            }
-        };
         
         // management info
         let data = ComponentInfo {
@@ -180,6 +163,20 @@ impl Server {
     }
     pub(crate) fn get_component_mut<C: Component>(&mut self) -> Option<&mut C> {
         self.components.get_mut::<C>()
+    }
+    pub(crate) fn has_component<C: Component>(&self) -> bool {
+        self.components.contains_key::<C>()
+    }
+    pub(crate) fn get_config<C: Component>(&self) -> C::Config {
+        use serde::Deserialize;
+        match self.loaded_config.configs.get(C::ID) {
+            None => C::Config::default(),
+            Some(serialized) => C::Config::deserialize(serialized.clone())
+                .unwrap_or_else(|e| {
+                    error!("couldn't deserialize config for `{}` due to: {e}", C::ID);
+                    C::Config::default()
+                })
+        }
     }
 }
 impl Server {

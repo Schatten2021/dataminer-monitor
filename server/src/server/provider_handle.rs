@@ -32,8 +32,19 @@ impl ComponentHandle {
     /// # Note
     /// There is no check for recursive dependencies. Do not use recursive dependencies.
     pub fn add_notification_provider_dependency<P: NotificationProvider>(&self) {
+        if !self.backend.read().has_component::<P>() {
+            let handle = Self::new::<P>(self.backend.clone());
+            let config = self.backend.read().get_config::<P>();
+            let provider = match P::init(handle, config) {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("error initializing component: {e}; skipping...");
+                    return;
+                }
+            };
+            self.backend.write().add_notification_provider(provider);
+        }
         self.backend.write().add_notification_provider_dependency::<P>(
-            Self::new::<P>(self.backend.clone()),
             self.type_id,
         );
     }
@@ -42,8 +53,18 @@ impl ComponentHandle {
     /// # Note
     /// There is no check for recursive dependencies. Do not use recursive dependencies.
     pub fn add_component_dependency<C: Component>(&self) {
+        if !self.backend.read().has_component::<C>() {
+            let handle = Self::new::<C>(self.backend.clone());
+            let component = match C::init(handle, self.backend.read().get_config::<C>()) {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("error initializing component: {e}; skipping...");
+                    return;
+                }
+            };
+            self.backend.write().add_component(component);
+        }
         self.backend.write().add_component_dependency::<C>(
-            Self::new::<C>(self.backend.clone()),
             self.type_id,
         );
     }

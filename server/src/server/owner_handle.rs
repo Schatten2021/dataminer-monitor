@@ -32,7 +32,15 @@ impl ServerHandle {
     /// so that the server knows that they can send notifications.
     #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]
     pub fn add_component<C: Component>(&self) -> &Self {
-        self.0.write().add_component::<C>(self.provider_handle::<C>());
+        let config = self.0.read().get_config::<C>();
+        let component = match C::init(self.provider_handle::<C>(), config) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("couldn't initialize component {}: {e}", C::ID);
+                return self
+            }
+        };
+        self.0.write().add_component::<C>(component);
         self
     }
     /// Removes a component (& dependant components) from the server.
@@ -44,7 +52,15 @@ impl ServerHandle {
     /// Adds a new [`NotificationProvider`] to the server.
     #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]
     pub fn add_notification_provider<P: NotificationProvider>(&self) -> &Self {
-        self.0.write().add_notification_provider::<P>(self.provider_handle::<P>());
+        let config = self.0.read().get_config::<P>();
+        let provider = match P::init(self.provider_handle::<P>(), config) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("couldn't initialize component {}: {e}", P::ID);
+                return self
+            }
+        };
+        self.0.write().add_notification_provider::<P>(provider);
         self
     }
     /// reload the config from the config file.
