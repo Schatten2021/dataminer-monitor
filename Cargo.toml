@@ -18,7 +18,7 @@ api-types = { path = "api-types" }
 
 [package]
 name = "status-server"
-version = "3.0.0-beta.5"
+version = "3.0.0-beta.6"
 edition = "2024"
 publish = ["kellnr"]
 
