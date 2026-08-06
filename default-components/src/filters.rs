@@ -120,16 +120,22 @@ pub enum OnlineStateChange {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
 /// Matches when attributes of an element change.
 pub struct AttributeChange {
+    #[serde(flatten)]
+    id: AttributeIdMatcher,
+
+    #[serde(default)]
+    /// The actual element being matched.
+    event: AttributeEvent,
+}
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash, Default)]
+/// Matches an AttributeId.
+pub struct AttributeIdMatcher {
     /// The id of the attribute.
     id: Option<String>,
 
     #[serde(default="always")]
     /// whether to match the id exactly (no children)
     exact: bool,
-
-    #[serde(default)]
-    /// The actual element being matched.
-    event: AttributeEvent,
 }
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash, Default)]
 #[serde(rename_all="snake_case")]
@@ -198,17 +204,23 @@ impl Filtering<NotificationReason> for StateChange {
             Self::AttributeChange(change) => match reason {
                 NotificationReason::AttributeCreated(id, _) |
                 NotificationReason::AttributeChanged(id, _, _) |
-                NotificationReason::DeleteAttribute(id, _) => change.event.matches(reason) &&
-                    if change.exact {
-                        change.id.as_ref().is_none_or(|filter| filter == id)
-                    } else {
-                        change.id.as_ref().is_none_or(|filter| {
-                            id.starts_with(filter) && id.get(filter.len()..)
-                                .is_none_or(|c| c.starts_with('.'))
-                        })
-                    },
+                NotificationReason::DeleteAttribute(id, _) => change.event.matches(reason) && change.id.matches(id),
                 _ => false,
             }
+        }
+    }
+}
+impl Filtering<String> for AttributeIdMatcher {
+    fn matches(&self, value: &String) -> bool {
+        if self.exact {
+            self.id.as_ref().is_none_or(|filter| filter == value)
+        } else {
+            self.id.as_ref()
+                .is_none_or(|filter|
+                    value.starts_with(filter) &&
+                        value.get(filter.len()..)
+                            .is_none_or(|remaining| remaining.starts_with('.'))
+                )
         }
     }
 }

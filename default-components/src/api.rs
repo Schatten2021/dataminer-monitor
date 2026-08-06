@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -6,7 +7,8 @@ use axum::response::IntoResponse;
 use tokio::sync::{Mutex, RwLock};
 use utils::Never;
 use api_types::{ApiResponse, ServerError};
-use server::{ComponentHandle, Notification};
+use server::{ComponentHandle, Notification, NotificationReason};
+use crate::filters::{AttributeIdMatcher, Filter, SingleFilter};
 
 fn default_path() -> String { "api/".to_string() }
 
@@ -15,11 +17,26 @@ fn default_path() -> String { "api/".to_string() }
 pub struct Config {
     #[serde(default="default_path")]
     path: String,
+    #[serde(default)]
+    filter: Filter,
+
+    #[serde(default)]
+    #[serde(alias="attribute-filter",
+        alias="filter_attribute", alias="filter_attributes", alias="filter-attribute", alias="filter-attributes")]
+    attribute_filter: SingleFilter<AttributeIdMatcher>,
+
+    #[serde(default)]
+    #[serde(alias="element-filter",
+        alias="filter_element", alias="filter_elements", alias="filter-element", alias="filter-elements")]
+    element_filter: SingleFilter<String>,
 }
 impl Default for Config {
     fn default() -> Self {
         Self {
             path: default_path(),
+            filter: Filter::default(),
+            attribute_filter: SingleFilter::default(),
+            element_filter: SingleFilter::default(),
         }
     }
 }
@@ -73,11 +90,7 @@ impl server::Component for Api {
             loop {
                 ticker.tick().await;
                 let mut lock = ws.write().await;
-                let mut vec = Vec::new();
-                core::mem::swap(&mut *lock, &mut vec);
-                *lock = vec.into_iter()
-                    .filter(|socket| socket.online.load(Ordering::Relaxed))
-                    .collect();
+                lock.retain(|socket| socket.online.load(Ordering::Relaxed));
             }
         });
         Ok(Self {
@@ -138,12 +151,28 @@ impl server::Component for Api {
         let path_prefix_len = self.config.path.len();
         let state = self.state.clone();
         let websockets = self.websockets.clone();
+        let filters = (&request.uri().path()[path_prefix_len..] == "/current")
+            .then(|| (
+                self.config.attribute_filter.clone(),
+                self.config.element_filter.clone(),
+            ));
         Ok(Box::pin(async move {
             let path = &request.uri().path()[path_prefix_len..];
             let _ = request;
             let (code, json) = match path {
                 "/" => ok!("Welcome to the API!"),
-                "/current" => ok!(api_types::States::from(state.get_states())),
+                "/current" => {
+                    let (attribute_filter, element_filter) = filters.unwrap();
+                    ok!(api_types::States::from(state.get_states()
+                        .into_iter()
+                        .filter(|(id, _)| element_filter.allows(id))
+                        .map(|(id, mut state)| {
+                            state.attributes.retain(|id, _| attribute_filter.allows(id));
+                            (id, state)
+                        })
+                        .collect::<HashMap<_, _>>()
+                    ))
+                },
                 // TODO: add routes for requesting selected elements/stati/etc.
                 "/ws" | "/websocket" | "/socket" => {
                     use axum::extract::{
@@ -182,6 +211,12 @@ impl server::Component for Api {
 impl server::NotificationProvider for Api {
     fn notify(&self, notification: Notification) {
         use axum::extract::ws::{Message, Utf8Bytes};
+        if !self.config.filter.allows(&notification) ||
+            matches!(&notification.reason,
+                NotificationReason::DeleteAttribute(id, _) |
+                NotificationReason::AttributeChanged(id, _, _) |
+                NotificationReason::AttributeCreated(id, _)
+                if !self.config.attribute_filter.allows(id)) { return;}
         let sockets = self.websockets.clone();
         let message: Utf8Bytes = match serde_json::to_string(&api_types::websocket::Message::from(notification)) {
             Ok(v) => v,
@@ -193,14 +228,15 @@ impl server::NotificationProvider for Api {
         tokio::spawn(async move {
             let sockets = sockets;
             for socket in sockets.read().await.iter() {
-                if socket.online.load(Ordering::Relaxed) {
-                    let msg = message.clone();
-                    trace!("sending {message} to websockets");
-                    if let Err(e) = socket.ws.lock().await
-                        .send(Message::Text(msg)).await {
-                        error!("error sending to websocket: {e}");
-                        socket.online.store(false, Ordering::Relaxed);
-                    }
+                if !socket.online.load(Ordering::Relaxed) {
+                    continue;
+                }
+                let msg = message.clone();
+                trace!("sending {message} to websockets");
+                if let Err(e) = socket.ws.lock().await
+                    .send(Message::Text(msg)).await {
+                    error!("error sending to websocket: {e}");
+                    socket.online.store(false, Ordering::Relaxed);
                 }
             }
         });

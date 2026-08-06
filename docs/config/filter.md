@@ -55,6 +55,11 @@ change5.online = "offline" # matches any online status change where the new stat
 | exact      | bool           | whether to exactly match the id or also match subattributes. Defaults to `true` |
 | event      | AttributeEvent | The event to match                                                              |
 
+## AttributeMatcher
+| config key | type   | description                                              |
+|------------|--------|----------------------------------------------------------|
+| id         | string | the ID of the attributes to match                        |
+| exact      | bool   | whether to exactly match the `id` or also match children |
 ### AttributeEvents
 
 | event  | description                             |
