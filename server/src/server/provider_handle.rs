@@ -120,9 +120,18 @@ impl ComponentHandle {
     pub fn get_attribute(&self, element_id: &str, attribute_id: &str) -> Option<AttributeValue> {
         self.backend.read().get_attribute(element_id, attribute_id)
     }
+    #[expect(clippy::doc_overindented_list_items, reason="this is for easier reading while editing.")]
     /// Deletes an attribute for an element.
-    pub fn delete_attribute(&self, element_id: &str, attribute_id: &str) {
-        self.backend.write().delete_attribute(element_id, attribute_id, self.id);
+    ///
+    /// # Arguments
+    /// * `element_id`: The id of the element whose attribute is to be deleted
+    /// * `attribute_id`: The id of the attribute to be deleted
+    /// * `exact`: Whether to delete only this attribute or also all subattributes.
+    ///            NOTE: It could be very good for performance if you know that there will _not_ be
+    ///                  any subattributes to set this, as it currently has to check every single
+    ///                  attribute of the element.
+    pub fn delete_attribute(&self, element_id: &str, attribute_id: &str, exact: bool) {
+        self.backend.write().delete_attribute(element_id, attribute_id, self.id, exact);
     }
     /// reload the config from the config file.
     #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]

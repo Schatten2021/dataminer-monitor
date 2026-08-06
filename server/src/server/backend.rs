@@ -99,7 +99,7 @@ impl Server {
             return;
         }
         if !self.components.contains_key::<P>() {
-            error!("component {} not yet loaded!", P::ID)
+            error!("component {} not yet loaded!", P::ID);
         }
         self.add_component_dependency::<P>(dependant);
         let info = NotificationProviderInfo {
@@ -240,15 +240,34 @@ impl Server {
         self.states.get(element_id)?
             .attributes.get(attribute_id).cloned()
     }
-    pub(crate) fn delete_attribute(&mut self, element_id: &str, attribute_id: &str, component_id: &str) {
+    pub(crate) fn delete_attribute(&mut self, element_id: &str, attribute_id: &str, component_id: &str, exact: bool) {
         let Some(element) = self.states.get_mut(element_id) else { return; };
-        if let Some(old) = element.attributes.remove(attribute_id) {
-            self.notify(Notification::new(
+        if exact {
+            if let Some(old) = element.attributes.remove(attribute_id) {
+                self.notify(Notification::new(
+                    component_id.to_string(),
+                    element_id.to_string(),
+                    NotificationReason::DeleteAttribute(attribute_id.to_string(), old))
+                );
+            }
+            return;
+        }
+        element.attributes.keys()
+            .filter(|key| key.starts_with(attribute_id) && key.get(attribute_id.len()..)
+                .is_none_or(|v| v.starts_with('.')))
+            .cloned()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|id| {
+                let old = element.attributes.remove(&id).unwrap();
+                (id, old)
+            })
+            .collect::<Vec<_>>().into_iter()
+            .for_each(|(id, old)| self.notify(Notification::new(
                 component_id.to_string(),
                 element_id.to_string(),
-                NotificationReason::DeleteAttribute(attribute_id.to_string(), old))
-            );
-        }
+                NotificationReason::DeleteAttribute(id, old))
+            ));
     }
     pub(crate) fn online_status_changed(&mut self, component_id: &'static str, element_id: &str, new_status: bool) {
         if let Some(state) = self.states.get_mut(element_id) {

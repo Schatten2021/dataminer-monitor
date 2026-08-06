@@ -49,7 +49,13 @@ change5.online = "offline" # matches any online status change where the new stat
 ```
 
 ## AttributeChange
-Each AttributeChange can specify the id, matching only events to the attribute with that specific id.
+| config key | type           | description                                                                     |
+|------------|----------------|---------------------------------------------------------------------------------|
+| id         | string         | the ID of the attributes to match                                               |
+| exact      | bool           | whether to exactly match the id or also match subattributes. Defaults to `true` |
+| event      | AttributeEvent | The event to match                                                              |
+
+### AttributeEvents
 
 | event  | description                             |
 |--------|-----------------------------------------|
@@ -60,7 +66,7 @@ Each AttributeChange can specify the id, matching only events to the attribute w
 ### Example
 ```toml
 change = { event="any" } # match any change in an attribute
-change2 = { id="foo.bar", event="any" } # match any change to the attribute "foo.bar"
+change2 = { id="foo.bar", exact=true, event="any" } # match any change to the attribute "foo.bar"
 change3 = { event="create" } # match all creation events for any attribute
 ```
 

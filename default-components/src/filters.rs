@@ -3,6 +3,8 @@
 use server::{Notification, NotificationReason};
 use std::hash::Hash;
 
+const fn always() -> bool { true }
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Default)]
 /// A fully configurable filter.
 ///
@@ -120,6 +122,11 @@ pub enum OnlineStateChange {
 pub struct AttributeChange {
     /// The id of the attribute.
     id: Option<String>,
+
+    #[serde(default="always")]
+    /// whether to match the id exactly (no children)
+    exact: bool,
+
     #[serde(default)]
     /// The actual element being matched.
     event: AttributeEvent,
@@ -192,7 +199,14 @@ impl Filtering<NotificationReason> for StateChange {
                 NotificationReason::AttributeCreated(id, _) |
                 NotificationReason::AttributeChanged(id, _, _) |
                 NotificationReason::DeleteAttribute(id, _) => change.event.matches(reason) &&
-                    change.id.as_ref().is_none_or(|v| v == id),
+                    if change.exact {
+                        change.id.as_ref().is_none_or(|filter| filter == id)
+                    } else {
+                        change.id.as_ref().is_none_or(|filter| {
+                            id.starts_with(filter) && id.get(filter.len()..)
+                                .is_none_or(|c| c.starts_with('.'))
+                        })
+                    },
                 _ => false,
             }
         }

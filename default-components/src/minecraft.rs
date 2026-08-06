@@ -114,33 +114,33 @@ fn start_ping(id: String, conf: JavaConfig, state: ComponentHandle) -> tokio::ta
                         .collect::<Vec<_>>()
                     ));
                 } else {
-                    state.delete_attribute(&id, "minecraft.players.sample");
+                    state.delete_attribute(&id, "minecraft.players.sample", true);
                 }
             } else {
-                state.delete_attribute(&id, "state.players.max");
-                state.delete_attribute(&id, "state.players.online");
-                state.delete_attribute(&id, "state.players.sample");
+                state.delete_attribute(&id, "state.players.max", true);
+                state.delete_attribute(&id, "state.players.online", true);
+                state.delete_attribute(&id, "state.players.sample", true);
             }
             if let Some(description) = response.description {
                 set_if_unchanged!("minecraft.description", AttributeValue::String(description));
             } else {
-                state.delete_attribute(&id, "minecraft.description");
+                state.delete_attribute(&id, "minecraft.description", true);
             }
             if let Some(favicon) = response.favicon {
                 set_if_unchanged!("minecraft.favicon", AttributeValue::String(favicon));
             } else {
-                state.delete_attribute(&id, "minecraft.favicon");
+                state.delete_attribute(&id, "minecraft.favicon", true);
             }
             if let Some(secure_chat) = response.enforcesSecureChat {
                 set_if_unchanged!("minecraft.enforces_secure_chat", AttributeValue::Boolean(secure_chat));
                 if secure_chat {
                     set_if_unchanged!("minecraft.retarded", AttributeValue::Unit);
                 } else {
-                    state.delete_attribute(&id, "minecraft.retarded");
+                    state.delete_attribute(&id, "minecraft.retarded", true);
                 }
             } else {
-                state.delete_attribute(&id, "minecraft.enforces_secure_chat");
-                state.delete_attribute(&id, "minecraft.retarded");
+                state.delete_attribute(&id, "minecraft.enforces_secure_chat", true);
+                state.delete_attribute(&id, "minecraft.retarded", true);
             }
         }
     })
