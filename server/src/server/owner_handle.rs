@@ -32,6 +32,10 @@ impl ServerHandle {
     /// so that the server knows that they can send notifications.
     // #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]
     pub fn add_component<C: Component>(&self) -> &Self {
+        if self.0.read().ignored::<C>() {
+            info!("ignored component {}", C::ID);
+            return self;
+        }
         let config = self.0.read().get_config::<C>();
         let component = match C::init(self.provider_handle::<C>(), config) {
             Ok(v) => v,
@@ -52,6 +56,10 @@ impl ServerHandle {
     /// Adds a new [`NotificationProvider`] to the server.
     // #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]
     pub fn add_notification_provider<P: NotificationProvider>(&self) -> &Self {
+        if self.0.read().ignored::<P>() {
+            info!("ignored component {}", P::ID);
+            return self;
+        }
         let config = self.0.read().get_config::<P>();
         let provider = match P::init(self.provider_handle::<P>(), config) {
             Ok(v) => v,

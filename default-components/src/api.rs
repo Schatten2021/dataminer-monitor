@@ -77,7 +77,7 @@ fn should_handle_path(mut path: &str, mut prefix: &str) -> bool {
 }
 
 impl server::Component for Api {
-    const ID: &'static str = "";
+    const ID: &'static str = "api";
     type Config = Config;
     type ConfigError = Never;
 
@@ -93,6 +93,7 @@ impl server::Component for Api {
                 lock.retain(|socket| socket.online.load(Ordering::Relaxed));
             }
         });
+        trace!("loaded API with config {config:?}");
         Ok(Self {
             state: server,
             websockets,

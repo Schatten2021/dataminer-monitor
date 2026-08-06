@@ -178,6 +178,9 @@ impl Server {
                 })
         }
     }
+    pub(crate) fn ignored<C: Component>(&self) -> bool {
+        self.loaded_config.ignored.components.contains(C::ID)
+    }
 }
 impl Server {
     pub(crate) fn new(config_path: PathBuf) -> Self {

@@ -32,6 +32,10 @@ impl ComponentHandle {
     /// # Note
     /// There is no check for recursive dependencies. Do not use recursive dependencies.
     pub fn add_notification_provider_dependency<P: NotificationProvider>(&self) {
+        if self.backend.read().ignored::<P>() {
+            error!("ignored dependency {} for {}!", P::ID, self.id);
+            return;
+        }
         if !self.backend.read().has_component::<P>() {
             let handle = Self::new::<P>(self.backend.clone());
             let config = self.backend.read().get_config::<P>();
@@ -53,6 +57,10 @@ impl ComponentHandle {
     /// # Note
     /// There is no check for recursive dependencies. Do not use recursive dependencies.
     pub fn add_component_dependency<C: Component>(&self) {
+        if self.backend.read().ignored::<C>() {
+            error!("ignored dependency {} for {}!", C::ID, self.id);
+            return;
+        }
         if !self.backend.read().has_component::<C>() {
             let handle = Self::new::<C>(self.backend.clone());
             let component = match C::init(handle, self.backend.read().get_config::<C>()) {
