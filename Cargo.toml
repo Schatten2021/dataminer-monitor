@@ -39,6 +39,7 @@ server.workspace = true
 axum.workspace = true
 default-components.workspace = true
 clap = { version = "4.6", features = ["derive"] }
+toml.workspace = true
 
 
 #

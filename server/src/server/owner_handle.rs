@@ -71,6 +71,11 @@ impl ServerHandle {
         self.0.write().add_notification_provider::<P>(provider);
         self
     }
+    /// checks the config, returning the deserialized config if it exists or the error if it doesn't.
+    #[must_use]
+    pub fn check_config<C: Component>(&self) -> Option<Result<C::Config, toml::de::Error>> {
+        self.0.read().check_config::<C>()
+    }
     /// reload the config from the config file.
     #[expect(clippy::must_use_candidate, reason="returning something here is more just for chaining.")]
     pub fn reload_config(&self) -> &Self {

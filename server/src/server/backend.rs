@@ -178,6 +178,11 @@ impl Server {
                 })
         }
     }
+    pub(crate) fn check_config<C: Component>(&self) -> Option<Result<C::Config, toml::de::Error>> {
+        use serde::Deserialize;
+        let conf = self.loaded_config.configs.get(C::ID)?;
+        Some(C::Config::deserialize(conf.clone()))
+    }
     pub(crate) fn ignored<C: Component>(&self) -> bool {
         self.loaded_config.ignored.components.contains(C::ID)
     }

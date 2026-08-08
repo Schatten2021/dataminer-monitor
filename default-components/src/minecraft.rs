@@ -3,11 +3,11 @@ use tokio::time::MissedTickBehavior;
 use utils::Never;
 use server::{AttributeValue, Component, ComponentHandle};
 
-#[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Config {
     pub java: HashMap<String, JavaConfig>,
 }
-#[derive(Clone, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct JavaConfig {
     pub url: String,
     #[serde(default="java_default_port")]

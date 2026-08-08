@@ -11,7 +11,7 @@ pub struct Config {
     #[serde(default)]
     /// The things that the server ignores completely.
     pub ignored: Ignored
-    }
+}
 #[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
 /// Ignored values 
 pub struct Ignored {

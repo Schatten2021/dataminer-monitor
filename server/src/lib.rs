@@ -42,6 +42,7 @@ pub use server::{
     ComponentHandle,
     ServerHandle as Server,
 };
+pub use config::Config;
 pub use component::{
     Component,
     RequestHandle,

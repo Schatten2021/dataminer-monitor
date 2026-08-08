@@ -2321,6 +2321,7 @@ dependencies = [
  "default-components",
  "server",
  "tokio",
+ "toml",
  "tracing",
  "tracing-subscriber",
 ]
