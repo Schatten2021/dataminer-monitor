@@ -3,19 +3,53 @@ name = "default-components"
 version = "3.0.0"
 edition = "2024"
 
+[features]
+# utils
+filters = []
+# api/web "notifications"
+api = ["filters", "dep:api-types", "dep:serde_json", "dep:axum"]
+websockets = ["filters", "dep:api-types", "dep:tokio", "dep:serde_json", "dep:axum", "axum/ws"]
+frontend = ["api", "websockets"]
+# notifications
+ntfy-notifications = ["filters", "dep:url", "dep:tokio", "dep:strfmt", "dep:reqwest"]
+email-notifications = ["filters", "dep:lettre", "dep:tokio"]
+# status providers
+dataminer-status = ["dep:chrono", "dep:tokio", "dep:axum"]
+minecraft-status = ["dep:chrono", "dep:serde_json", "dep:minecraft-net", "dep:tokio"]
+website-status = ["filters", "dep:reqwest", "dep:chrono", "dep:tokio"]
+
+# definitions for better mass importing
+all-utils = ["filters"]
+all-status = ["dataminer-status", "minecraft-status", "website-status"]
+all-notifications = [
+    "api", "websockets", "frontend",
+    "email-notifications", "ntfy-notifications"
+]
+all = ["all-utils", "all-status", "all-notifications"]
+default = ["all-status", "all-notifications"]
 
 [dependencies]
-api-types = { workspace = true, features = ["server-support"] }
-axum = { workspace = true, features = ["ws"] }
-chrono.workspace = true
-serde.workspace = true
+# used in basically every scenario
+tracing.workspace = true # debugging/logging
+utils.workspace = true # utilities
+serde.workspace = true # config
 server.workspace = true
-tokio.workspace = true
-tracing.workspace = true
-utils.workspace = true
-reqwest = { version = "0.13", features = ["json"] }
-serde_json = "1"
-minecraft-net = "0.1.0"
-lettre = "0.11"
-url = { version = "2.5", features = ["serde"] }
-strfmt = "0.2"
+
+# common
+tokio = { workspace = true, optional = true }
+reqwest = { version = "0.13", features = ["json"], optional = true } # NTFY, website-status
+chrono = { workspace = true, optional = true } # usually status providers
+
+# API & frontend
+axum = { workspace = true, optional = true }
+# api
+api-types = { workspace = true, features = ["server-support"], optional = true }
+serde_json = { version = "1", optional = true }
+
+# NTFY
+url = { version = "2.5", features = ["serde"], optional = true }
+strfmt = { version = "0.2", optional = true }
+
+# E-Mail
+lettre = { version = "0.11", optional = true }
+minecraft-net = { version = "0.1.0", optional = true }

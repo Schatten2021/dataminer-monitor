@@ -1,0 +1,120 @@
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
+use axum::extract::Request;
+use axum::response::IntoResponse;
+use tokio::sync::{Mutex, RwLock};
+
+use utils::Never;
+use server::{ComponentHandle, Notification, RequestHandle};
+use crate::filters::Filter;
+
+fn default_path() -> String { "api/ws".to_string() }
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Config {
+    #[serde(default="default_path")]
+    path: String,
+    #[serde(default)]
+    filter: Filter,
+}
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            path: default_path(),
+            filter: Filter::default(),
+        }
+    }
+}
+
+
+struct Socket {
+    ws: Mutex<axum::extract::ws::WebSocket>,
+    online: AtomicBool,
+}
+
+/// Provides Websockets at the configured path, sending [`Notification`]s via the Socket.
+pub struct Websockets {
+    sockets: Arc<RwLock<Vec<Socket>>>,
+    config: Config,
+}
+impl server::Component for Websockets {
+    const ID: &'static str = "websocket";
+    type Config = Config;
+    type ConfigError = Never;
+
+    fn init(_: ComponentHandle, config: Self::Config) -> Result<Self, Self::ConfigError> {
+        let websockets = Arc::new(RwLock::new(Vec::<Socket>::new()));
+        let mut ticker = tokio::time::interval(Duration::from_mins(30));
+        let ws = websockets.clone();
+        tokio::spawn(async move {
+            ticker.tick().await;
+            loop {
+                ticker.tick().await;
+                let mut lock = ws.write().await;
+                lock.retain(|socket| socket.online.load(Ordering::Relaxed));
+            }
+        });
+        Ok(Self {
+            sockets: websockets,
+            config,
+        })
+    }
+
+    fn reconfigure(&mut self, config: Self::Config) -> Result<(), Self::ConfigError> {
+        self.config = config;
+        Ok(())
+    }
+
+    fn try_handle(&self, request: Request) -> Result<RequestHandle, Request> {
+        if request.uri().path() != self.config.path { return Err(request) }
+        let websockets = self.sockets.clone();
+        Ok(Box::pin(async move {
+            use axum::extract::{
+                ws::WebSocketUpgrade,
+                FromRequest,
+            };
+            match WebSocketUpgrade::from_request(request, &()).await {
+                Ok(upgrade) => {
+                    upgrade.on_upgrade(|socket| async move {
+                        let socket = Socket {
+                            ws: Mutex::new(socket),
+                            online: AtomicBool::new(true),
+                        };
+                        websockets.write().await.push(socket);
+                    })
+                }
+                Err(e) => e.into_response(),
+            }
+        }))
+    }
+}
+impl server::NotificationProvider for Websockets {
+    fn notify(&self, notification: Notification) {
+        use axum::extract::ws::{Message, Utf8Bytes};
+        if !self.config.filter.allows(&notification) { return;}
+        let sockets = self.sockets.clone();
+        let message: Utf8Bytes = match serde_json::to_string(&api_types::websocket::Message::from(notification)) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("couldn't serialize notification: {e}");
+                return;
+            }
+        }.into();
+        tokio::spawn(async move {
+            let sockets = sockets;
+            for socket in sockets.read().await.iter() {
+                if !socket.online.load(Ordering::Relaxed) {
+                    continue;
+                }
+                let msg = message.clone();
+                trace!("sending {message} to websockets");
+                if let Err(e) = socket.ws.lock().await
+                    .send(Message::Text(msg)).await {
+                    error!("error sending to websocket: {e}");
+                    socket.online.store(false, Ordering::Relaxed);
+                }
+            }
+        });
+    }
+}

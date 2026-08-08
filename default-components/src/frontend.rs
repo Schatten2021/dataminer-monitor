@@ -2,6 +2,7 @@ use axum::extract::Request;
 use utils::Never;
 use server::{Component, ComponentHandle, RequestHandle};
 use crate::Api;
+use crate::api_websockets::Websockets;
 
 /// provides a frontend for the status server.
 pub struct Frontend;
@@ -11,7 +12,8 @@ impl Component for Frontend {
     type ConfigError = Never;
 
     fn init(handle: ComponentHandle, (): Self::Config) -> Result<Self, Self::ConfigError> {
-        handle.add_notification_provider_dependency::<Api>();
+        handle.add_component_dependency::<Api>();
+        handle.add_notification_provider_dependency::<Websockets>();
         Ok(Self)
     }
 

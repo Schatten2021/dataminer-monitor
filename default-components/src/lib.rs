@@ -27,22 +27,21 @@
 #![cfg_attr(not(debug_assertions), deny(clippy::undocumented_unsafe_blocks))]
 #![cfg_attr(debug_assertions, warn(clippy::undocumented_unsafe_blocks))]
 
+#[allow(unused_imports, reason="is usually used when anything other than `filters` are selected.")]
 #[macro_use]
 extern crate tracing;
 
-pub mod filters;
-mod website;
-mod api;
-mod frontend;
-mod dataminer;
-mod minecraft;
-mod email;
-mod ntfy;
+use utils::featured_use;
 
-pub use website::WebsiteStatuse;
-pub use api::Api;
-pub use frontend::Frontend;
-pub use dataminer::DataminerStatus;
-pub use minecraft::MinecraftStatus;
-pub use email::EmailNotificationProvider;
-pub use ntfy::NtfyNotificationProvider;
+#[cfg(feature = "filters")]
+pub mod filters;
+
+featured_use!(if "websockets": api_websockets::Websockets);
+
+featured_use!(if "website-status": website::WebsiteStatuse);
+featured_use!(if "api": api::Api);
+featured_use!(if "frontend": frontend::Frontend);
+featured_use!(if "dataminer-status": dataminer::DataminerStatus);
+featured_use!(if "minecraft-status": minecraft::MinecraftStatus);
+featured_use!(if "email-notifications": email::EmailNotificationProvider);
+featured_use!(if "ntfy-notifications": ntfy::NtfyNotificationProvider);

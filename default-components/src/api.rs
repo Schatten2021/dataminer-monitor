@@ -1,14 +1,9 @@
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
 use axum::body::Body;
-use axum::response::IntoResponse;
-use tokio::sync::{Mutex, RwLock};
 use utils::Never;
 use api_types::{ApiResponse, ServerError};
-use server::{ComponentHandle, Notification, NotificationReason};
-use crate::filters::{AttributeIdMatcher, Filter, SingleFilter};
+use server::ComponentHandle;
+use crate::filters::{AttributeIdMatcher, SingleFilter};
 
 fn default_path() -> String { "api/".to_string() }
 
@@ -17,8 +12,6 @@ fn default_path() -> String { "api/".to_string() }
 pub struct Config {
     #[serde(default="default_path")]
     path: String,
-    #[serde(default)]
-    filter: Filter,
 
     #[serde(default)]
     #[serde(alias="attribute-filter",
@@ -34,16 +27,10 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             path: default_path(),
-            filter: Filter::default(),
             attribute_filter: SingleFilter::default(),
             element_filter: SingleFilter::default(),
         }
     }
-}
-
-struct Socket {
-    ws: Mutex<axum::extract::ws::WebSocket>,
-    online: AtomicBool,
 }
 
 /// Provides an API for interacting with the status server.
@@ -52,10 +39,8 @@ struct Socket {
 /// - [x] current state of all elements
 /// - [ ] current state of specific element
 /// - [ ] attribute of specific element
-/// - [x] websocket sending out [`Notifications`] when they come in
 pub struct Api {
     state: ComponentHandle,
-    websockets: Arc<RwLock<Vec<Socket>>>,
     config: Config,
 }
 
@@ -71,8 +56,7 @@ fn should_handle_path(mut path: &str, mut prefix: &str) -> bool {
     matches!(
         path,
         "" | "/" |
-        "/current" |
-        "/ws" | "/websocket" | "/socket"
+        "/current"
     )
 }
 
@@ -82,21 +66,9 @@ impl server::Component for Api {
     type ConfigError = Never;
 
     fn init(server: ComponentHandle, config: Self::Config) -> Result<Self, Self::ConfigError> {
-        let websockets = Arc::new(RwLock::new(Vec::<Socket>::new()));
-        let mut ticker = tokio::time::interval(Duration::from_mins(30));
-        let ws = websockets.clone();
-        tokio::spawn(async move {
-            ticker.tick().await;
-            loop {
-                ticker.tick().await;
-                let mut lock = ws.write().await;
-                lock.retain(|socket| socket.online.load(Ordering::Relaxed));
-            }
-        });
         trace!("loaded API with config {config:?}");
         Ok(Self {
             state: server,
-            websockets,
             config,
         })
     }
@@ -151,19 +123,14 @@ impl server::Component for Api {
         }
         let path_prefix_len = self.config.path.len();
         let state = self.state.clone();
-        let websockets = self.websockets.clone();
-        let filters = (&request.uri().path()[path_prefix_len..] == "/current")
-            .then(|| (
-                self.config.attribute_filter.clone(),
-                self.config.element_filter.clone(),
-            ));
+        let attribute_filter = self.config.attribute_filter.clone();
+        let element_filter = self.config.element_filter.clone();
         Ok(Box::pin(async move {
             let path = &request.uri().path()[path_prefix_len..];
             let _ = request;
             let (code, json) = match path {
                 "/" => ok!("Welcome to the API!"),
                 "/current" => {
-                    let (attribute_filter, element_filter) = filters.unwrap();
                     ok!(api_types::States::from(state.get_states()
                         .into_iter()
                         .filter(|(id, _)| element_filter.allows(id))
@@ -175,24 +142,6 @@ impl server::Component for Api {
                     ))
                 },
                 // TODO: add routes for requesting selected elements/stati/etc.
-                "/ws" | "/websocket" | "/socket" => {
-                    use axum::extract::{
-                        ws::WebSocketUpgrade,
-                        FromRequest,
-                    };
-                    return match WebSocketUpgrade::from_request(request, &()).await {
-                        Ok(upgrade) => {
-                            upgrade.on_upgrade(|socket| async move {
-                                let socket = Socket {
-                                    ws: Mutex::new(socket),
-                                    online: AtomicBool::new(true),
-                                };
-                                websockets.write().await.push(socket);
-                            })
-                        }
-                        Err(e) => e.into_response(),
-                    };
-                }
                 _ => {
                     error!("route set to handle but no handle registered!");
                     exception!("unhandled.route", "Route marked as handled without a handle registered!")
@@ -207,39 +156,5 @@ impl server::Component for Api {
                 .body(Body::new(json))
                 .expect("some argument failed to parse?")
         }))
-    }
-}
-impl server::NotificationProvider for Api {
-    fn notify(&self, notification: Notification) {
-        use axum::extract::ws::{Message, Utf8Bytes};
-        if !self.config.filter.allows(&notification) ||
-            matches!(&notification.reason,
-                NotificationReason::DeleteAttribute(id, _) |
-                NotificationReason::AttributeChanged(id, _, _) |
-                NotificationReason::AttributeCreated(id, _)
-                if !self.config.attribute_filter.allows(id)) { return;}
-        let sockets = self.websockets.clone();
-        let message: Utf8Bytes = match serde_json::to_string(&api_types::websocket::Message::from(notification)) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("couldn't serialize notification: {e}");
-                return;
-            }
-        }.into();
-        tokio::spawn(async move {
-            let sockets = sockets;
-            for socket in sockets.read().await.iter() {
-                if !socket.online.load(Ordering::Relaxed) {
-                    continue;
-                }
-                let msg = message.clone();
-                trace!("sending {message} to websockets");
-                if let Err(e) = socket.ws.lock().await
-                    .send(Message::Text(msg)).await {
-                    error!("error sending to websocket: {e}");
-                    socket.online.store(false, Ordering::Relaxed);
-                }
-            }
-        });
     }
 }
