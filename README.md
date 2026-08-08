@@ -52,15 +52,15 @@ reloading the configuration also removes any dependants.
 Each [Component](#component) is configured via its `ID`. 
 The ids for the default components are:
 
-| Component  | ID        | config reference                 |
-|------------|-----------|----------------------------------|
-| api        | api       | [ref](docs/config/api.md)        |
-| websockets | sockets   | [ref](docs/config/websockets.md) |
-| dataminer  | miner     | [ref](docs/config/dataminer.md)  |
-| email      | email     | [ref](docs/config/email.md)      |
-| frontend   | frontend  | no config                        |
-| minecraft  | minecraft | [ref](docs/config/minecraft.md)  |
-| ntfy       | ntfy      | [ref](docs/config/ntfy.md)       |
-| website    | website   | [ref](docs/config/website.md)    |
+| Component  | ID        | feature             | config reference                 |
+|------------|-----------|---------------------|----------------------------------|
+| api        | api       | api                 | [ref](docs/config/api.md)        |
+| websockets | sockets   | websockets          | [ref](docs/config/websockets.md) |
+| frontend   | frontend  | frontend            | no config                        |
+| ntfy       | ntfy      | ntfy-notifications  | [ref](docs/config/ntfy.md)       |
+| email      | email     | email-notifications | [ref](docs/config/email.md)      |
+| minecraft  | minecraft | minecraft-status    | [ref](docs/config/minecraft.md)  |
+| website    | website   | website-status      | [ref](docs/config/website.md)    |
+| dataminer  | miner     | dataminer-status    | [ref](docs/config/dataminer.md)  |
 
 Additionally, many configurations use [filters](docs/config/filter.md) to provide a uniform filtering interface.
