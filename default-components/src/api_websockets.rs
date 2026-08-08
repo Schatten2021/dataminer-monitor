@@ -39,7 +39,7 @@ pub struct Websockets {
     config: Config,
 }
 impl server::Component for Websockets {
-    const ID: &'static str = "websocket";
+    const ID: &'static str = "sockets";
     type Config = Config;
     type ConfigError = Never;
 
