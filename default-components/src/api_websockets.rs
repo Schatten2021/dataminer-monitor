@@ -9,7 +9,7 @@ use utils::Never;
 use server::{ComponentHandle, Notification, RequestHandle};
 use crate::filters::Filter;
 
-fn default_path() -> String { "api/ws".to_string() }
+fn default_path() -> String { "/api/ws".to_string() }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Config {
@@ -55,6 +55,7 @@ impl server::Component for Websockets {
                 lock.retain(|socket| socket.online.load(Ordering::Relaxed));
             }
         });
+        trace!("loaded websockets with config {config:?}");
         Ok(Self {
             sockets: websockets,
             config,

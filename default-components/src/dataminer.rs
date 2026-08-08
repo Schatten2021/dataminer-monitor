@@ -95,7 +95,7 @@ fn spawn_timeout_task(id: String, config: Config, handle: ComponentHandle) -> to
             let now_std = std::time::Instant::now();
             let is_online = last_seen.is_some_and(|timestamp| (timestamp - now) > config.timeout);
             if handle.get_online_state(&id) != Some(is_online) {
-                info!("miner {id} changed to {}", if is_online { "online" } else { "offline" });
+                debug!("miner {id} changed to {}", if is_online { "online" } else { "offline" });
                 handle.change_online_state(&id, is_online);
                 if let Some(last_ping) = last_seen {
                     let diff = now - last_ping;
